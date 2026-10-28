@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Farmwatch</title>
+  <meta name="description" content="Live OSRS farming patch dashboard, powered by the Farmwatch RuneLite plugin." />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>Farmwatch</h1>
+    <nav class="tabs" role="tablist">
+      <button class="tab" data-view="board" role="tab" aria-selected="true">Status</button>
+      <button class="tab" data-view="timeline" role="tab" aria-selected="false">Timeline</button>
+      <button class="tab" data-view="planner" role="tab" aria-selected="false">Run planner</button>
+    </nav>
+    <div class="controls">
+      <label class="acc-switch">
+        Account
+        <select id="account-select"></select>
+      </label>
+      <span id="connection-chip" class="chip chip-neutral">Starting&hellip;</span>
+      <button id="theme-toggle" class="icon-btn" aria-label="Toggle theme">&#9681;</button>
+    </div>
+  </header>
+
+  <details id="connection-panel" class="connection-panel">
+    <summary>Connection</summary>
+    <div class="connection-body">
+      <label>Endpoint
+        <input id="endpoint-input" type="url" value="http://127.0.0.1:17060" />
+      </label>
+      <button id="reconnect-btn">Reconnect</button>
+      <div class="drop-zone" id="drop-zone">
+        <p>Plugin not running? Drag a <code>state-*.json</code> snapshot here.</p>
+        <input type="file" id="file-input" accept="application/json,.json" />
+      </div>
+      <button id="clear-cache-btn" class="link-btn">Clear cached snapshot</button>
+    </div>
+  </details>
+
+  <main>
+    <section id="view-board" class="view" data-view="board"></section>
+    <section id="view-timeline" class="view" data-view="timeline" hidden></section>
+    <section id="view-planner" class="view" data-view="planner" hidden></section>
+  </main>
+
+  <footer>
+    <p>Patch icons: &copy; OSRS Wiki contributors, CC BY-NC-SA 3.0. Independent plugin. Not endorsed by Jagex or RuneLite.</p>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
