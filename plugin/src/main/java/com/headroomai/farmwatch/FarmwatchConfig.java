@@ -10,10 +10,10 @@ public interface FarmwatchConfig extends Config
     @ConfigItem(
         keyName = "enableServer",
         name = "Enable HTTP server",
-        description = "Serve farming state on 127.0.0.1 so the companion webpage can read it live.",
+        description = "Serve farming state on 127.0.0.1 so the companion webpage can read it live. Off by default; file snapshots work either way.",
         position = 1
     )
-    default boolean enableServer() { return true; }
+    default boolean enableServer() { return false; }
 
     @ConfigItem(
         keyName = "httpPort",

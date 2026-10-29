@@ -283,7 +283,8 @@ body {
   gap: 10px;
   align-items: center;
 }
-.tl-label { font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tl-label { font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.tl-ico { width: 18px; height: 18px; image-rendering: pixelated; flex-shrink: 0; }
 .tl-track {
   position: relative;
   height: 14px;
@@ -300,7 +301,21 @@ body {
 .tl-dot.st-dead     { background: var(--dead); }
 
 .plan { padding-left: 24px; }
-.plan li { padding: 4px 0; }
+.plan li { padding: 4px 0; display: flex; align-items: center; gap: 8px; }
+.plan li .plan-ico { width: 20px; height: 20px; image-rendering: pixelated; }
+
+.summary-strip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 14px;
+  padding: 6px 2px;
+}
+.chip-sum { font-weight: 600; }
+.chip-sum-ready    { color: #fff; background: var(--ready);    border-color: var(--ready); }
+.chip-sum-soon     { color: #fff; background: var(--soon);     border-color: var(--soon); }
+.chip-sum-diseased { color: #fff; background: var(--diseased); border-color: var(--diseased); }
+.chip-sum-dead     { color: #fff; background: var(--dead);     border-color: var(--dead); }
 
 footer {
   margin-top: 40px;

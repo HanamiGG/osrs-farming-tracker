@@ -19,17 +19,25 @@
   (SEAWEED/GRAPES/CELASTRUS/CRYSTAL_TREE/CALQUAT/COMPOST/BIG_COMPOST
   all included)
 
-**Still rough / deferred:**
-- No patch icons yet
-- Plugin Hub submission not prepped
+**v1 feature-complete.** Dashboard shows produce icons (hotlinked from
+OSRS Wiki, CC-BY-NC-SA attributed in footer), tick-aligned readyAt
+matching the stock Farming Tracker's prediction, compost tier chip,
+protection ✓, multi-account switcher, three views (status / timeline /
+run planner), and a ready/soon/diseased/dead summary strip above the
+views.
 
-**readyAt is now tick-aligned.** Plugin mirrors `farmTickOffset` and
-`farmTickOffsetPrecision` from the stock tracker's RSProfile config;
-web port of `FarmingTracker.getTickTime` applies the offset when
-precision ≥ tickrate (or ≥ 40). First-time players will see a naive
-countdown until the stock plugin observes an exact growth tick (which
-happens on the first in-session patch transition the player witnesses);
-after that, countdowns match the stock plugin's.
+**HTTP server is OFF by default now** so Plugin Hub review has less to
+object to. Users enable it in the config panel; file snapshots work
+either way.
+
+**Deferred to v1.1+:**
+- Plugin Hub submission PR (fork runelite/plugin-hub, add manifest,
+  48x48 icon, open PR). Preparing this is the next big step toward
+  wider distribution.
+- Dark-mode variants of the summary chips (currently use the same
+  colors in both themes).
+- Birdhouse timers (uses a separate storage pattern in the stock plugin
+  that we don't mirror yet).
 
 ## What this is
 

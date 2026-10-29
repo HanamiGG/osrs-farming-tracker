@@ -183,9 +183,35 @@
   function renderAll() {
     populateAccountSelect();
     const d = currentAccountPatches();
+    renderSummary(d);
     if (STATE.view === 'board')    renderBoard(d);
     if (STATE.view === 'timeline') renderTimeline(d);
     if (STATE.view === 'planner')  renderPlanner(d);
+  }
+
+  function renderSummary(patches) {
+    const now = Date.now();
+    let ready = 0, soon = 0, diseased = 0, dead = 0;
+    for (const p of patches) {
+      if (p.state === 'HARVESTABLE') ready++;
+      else if (p.state === 'DISEASED') diseased++;
+      else if (p.state === 'DEAD') dead++;
+      else if (p.readyAt && Date.parse(p.readyAt) - now < NEAR_READY_MS) soon++;
+    }
+    let el = document.getElementById('summary-strip');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'summary-strip';
+      el.className = 'summary-strip';
+      const main = document.querySelector('main');
+      main.parentNode.insertBefore(el, main);
+    }
+    const parts = [];
+    if (ready)    parts.push(`<span class="chip chip-sum chip-sum-ready">${ready} ready</span>`);
+    if (soon)     parts.push(`<span class="chip chip-sum chip-sum-soon">${soon} soon</span>`);
+    if (diseased) parts.push(`<span class="chip chip-sum chip-sum-diseased">${diseased} diseased</span>`);
+    if (dead)     parts.push(`<span class="chip chip-sum chip-sum-dead">${dead} dead</span>`);
+    el.innerHTML = parts.length ? parts.join(' ') : '<span class="chip chip-neutral">Nothing urgent</span>';
   }
 
   function renderTicking() {
@@ -367,8 +393,11 @@
     const rows = withTimes.map(p => {
       const t = Date.parse(p.readyAt);
       const f = Math.max(0, Math.min(1, (t - start) / windowMs));
+      const ico = p.wikiFile
+        ? `<img class="tl-ico" loading="lazy" alt="" referrerpolicy="no-referrer" src="https://oldschool.runescape.wiki/images/${esc(p.wikiFile)}" onerror="this.remove()">`
+        : '';
       return `<div class="tl-row" title="${esc(prettyProduce(p.produce))} @ ${esc(prettyRegion(p.region))} — ${new Date(t).toLocaleString()}">
-        <span class="tl-label">${esc(prettyProduce(p.produce))} · ${esc(prettyRegion(p.region))}</span>
+        <span class="tl-label">${ico}${esc(prettyProduce(p.produce))} · ${esc(prettyRegion(p.region))}</span>
         <span class="tl-track"><span class="tl-now" style="left:${(nowFrac*100).toFixed(2)}%"></span><span class="tl-dot ${stateClass(p, t)}" style="left:${(f*100).toFixed(2)}%"></span></span>
       </div>`;
     }).join('');
@@ -385,9 +414,12 @@
       root.innerHTML = `<p class="empty">Nothing ready soon.</p>`;
       return;
     }
-    root.innerHTML = `<ol class="plan">${soon.map(p => `
-      <li><strong>${esc(prettyRegion(p.region))}</strong> — ${esc(prettyProduce(p.produce))} <small>${esc(p.state || '')}</small></li>
-    `).join('')}</ol>`;
+    root.innerHTML = `<ol class="plan">${soon.map(p => {
+      const ico = p.wikiFile
+        ? `<img class="plan-ico" loading="lazy" alt="" referrerpolicy="no-referrer" src="https://oldschool.runescape.wiki/images/${esc(p.wikiFile)}" onerror="this.remove()">`
+        : '';
+      return `<li>${ico}<strong>${esc(prettyRegion(p.region))}</strong> — ${esc(prettyProduce(p.produce))} <small>${esc(p.state || '')}</small></li>`;
+    }).join('')}</ol>`;
   }
 
   // ------- helpers -------
