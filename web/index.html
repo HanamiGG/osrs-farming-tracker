@@ -3,52 +3,85 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Farmwatch</title>
-  <meta name="description" content="Live OSRS farming patch dashboard, powered by the Farmwatch RuneLite plugin." />
+  <title>Farmwatch — OSRS farming dashboard</title>
+  <meta name="description" content="Live OSRS farming patch dashboard. Reads from the Farmwatch RuneLite plugin or a dropped snapshot file." />
+  <meta name="color-scheme" content="light dark" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header class="app-header">
-    <h1>Farmwatch</h1>
-    <nav class="tabs" role="tablist">
-      <button class="tab" data-view="board" role="tab" aria-selected="true">Status</button>
-      <button class="tab" data-view="timeline" role="tab" aria-selected="false">Timeline</button>
-      <button class="tab" data-view="planner" role="tab" aria-selected="false">Run planner</button>
-    </nav>
-    <div class="controls">
-      <label class="acc-switch">
-        Account
-        <select id="account-select"></select>
-      </label>
-      <span id="connection-chip" class="chip chip-neutral">Starting&hellip;</span>
-      <button id="theme-toggle" class="icon-btn" aria-label="Toggle theme">&#9681;</button>
-    </div>
-  </header>
+  <button id="nav-toggle" class="nav-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">&#9776;</button>
 
-  <details id="connection-panel" class="connection-panel">
-    <summary>Connection</summary>
-    <div class="connection-body">
-      <label>Endpoint
-        <input id="endpoint-input" type="url" value="http://127.0.0.1:17060" />
-      </label>
-      <button id="reconnect-btn">Reconnect</button>
-      <div class="drop-zone" id="drop-zone">
-        <p>Plugin not running? Drag a <code>state-*.json</code> snapshot here.</p>
-        <input type="file" id="file-input" accept="application/json,.json" />
+  <aside id="sidebar" class="sidebar" aria-label="Main navigation">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">&#x1F33F;</span>
+      <div>
+        <div class="brand-name">Farmwatch</div>
+        <div class="brand-sub">OSRS farming</div>
       </div>
-      <button id="clear-cache-btn" class="link-btn">Clear cached snapshot</button>
     </div>
-  </details>
 
-  <main>
-    <section id="view-board" class="view" data-view="board"></section>
-    <section id="view-timeline" class="view" data-view="timeline" hidden></section>
-    <section id="view-planner" class="view" data-view="planner" hidden></section>
-  </main>
+    <nav class="nav">
+      <div class="nav-group">
+        <div class="nav-group-title">Main</div>
+        <a class="nav-link" data-route="dashboard" href="#/dashboard"><span class="nav-ico">&#x25A0;</span>Dashboard</a>
+        <a class="nav-link" data-route="patches"   href="#/patches"><span class="nav-ico">&#x2338;</span>Patches</a>
+        <a class="nav-link" data-route="timeline"  href="#/timeline"><span class="nav-ico">&#x2630;</span>Timeline</a>
+        <a class="nav-link" data-route="planner"   href="#/planner"><span class="nav-ico">&#x25B6;</span>Run planner</a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-title">Insights</div>
+        <a class="nav-link" data-route="stats"     href="#/stats"><span class="nav-ico">&#x2261;</span>Statistics</a>
+        <a class="nav-link" data-route="reference" href="#/reference"><span class="nav-ico">&#x2042;</span>Reference</a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-title">Setup</div>
+        <a class="nav-link" data-route="connection" href="#/connection"><span class="nav-ico">&#x21C4;</span>Connection</a>
+        <a class="nav-link" data-route="settings"   href="#/settings"><span class="nav-ico">&#x2699;</span>Settings</a>
+        <a class="nav-link" data-route="about"      href="#/about"><span class="nav-ico">&#x2139;</span>About</a>
+      </div>
+    </nav>
 
-  <footer>
-    <p>Patch icons: &copy; OSRS Wiki contributors, CC BY-NC-SA 3.0. Independent plugin. Not endorsed by Jagex or RuneLite.</p>
-  </footer>
+    <div class="sidebar-footer">
+      <div class="status-dot"><span id="connection-chip" class="chip chip-neutral">starting&hellip;</span></div>
+      <small>Independent plugin · Not endorsed by Jagex or RuneLite</small>
+    </div>
+  </aside>
+
+  <div class="shell">
+    <header class="topbar">
+      <div class="crumbs">
+        <span class="crumb">Farmwatch</span>
+        <span class="crumb-sep">/</span>
+        <span class="crumb crumb-active" id="crumb-page">Dashboard</span>
+      </div>
+      <div class="topbar-tools">
+        <label class="search">
+          <span class="search-ico" aria-hidden="true">&#x1F50D;</span>
+          <input id="search-input" type="search" placeholder="Search produce, region, state&hellip;" autocomplete="off" />
+        </label>
+        <label class="acc-switch">
+          <span class="sr-only">Account</span>
+          <select id="account-select" aria-label="Account"></select>
+        </label>
+        <button id="theme-toggle" class="icon-btn" aria-label="Toggle theme" title="Theme">&#9681;</button>
+      </div>
+    </header>
+
+    <main id="main" class="main" tabindex="-1"></main>
+
+    <footer class="footer">
+      <p>Patch icons &copy; OSRS Wiki contributors, CC BY-NC-SA 3.0. Farmwatch source and plugin: <a href="https://github.com/HanamiGG/osrs-farming-tracker" rel="noopener">GitHub</a>.</p>
+    </footer>
+  </div>
+
+  <!-- Hidden templates kept out of the way; app.js clones them -->
+  <template id="tpl-empty">
+    <div class="empty">
+      <div class="empty-ico" aria-hidden="true">&#x1F33F;</div>
+      <h3 class="empty-title"></h3>
+      <p class="empty-body"></p>
+    </div>
+  </template>
 
   <script src="app.js" defer></script>
 </body>
