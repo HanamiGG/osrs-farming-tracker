@@ -32,3 +32,10 @@ java {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
+
+tasks.register('runClient', JavaExec) {
+    group = 'runelite'
+    description = 'Runs the RuneLite client with the Farmwatch plugin side-loaded.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.headroomai.farmwatch.FarmwatchPluginTest'
+}
