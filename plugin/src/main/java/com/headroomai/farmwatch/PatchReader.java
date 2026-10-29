@@ -31,6 +31,8 @@ public class PatchReader
     private static final Pattern COMPOST_KEY    = Pattern.compile("^(\\d+)\\.(\\d+)\\.compost$");
     private static final Pattern PROTECTED_KEY  = Pattern.compile("^(\\d+)\\.(\\d+)\\.protected$");
     private static final Pattern VARBIT_VALUE   = Pattern.compile("^(-?\\d+):(\\d+)$");
+    private static final String TICK_OFFSET_KEY           = "farmTickOffset";
+    private static final String TICK_OFFSET_PRECISION_KEY = "farmTickOffsetPrecision";
 
     private final Client client;
     private final ConfigManager configManager;
@@ -116,8 +118,30 @@ public class PatchReader
             return applyProtected(accountHash, Integer.parseInt(m.group(1)),
                 Integer.parseInt(m.group(2)), value);
         }
-        // notify.*, autoweed, FARM_TICK_OFFSET and other keys fall through.
+        if (TICK_OFFSET_KEY.equals(key))
+        {
+            return applyTickOffset(accountHash, value, false);
+        }
+        if (TICK_OFFSET_PRECISION_KEY.equals(key))
+        {
+            return applyTickOffset(accountHash, value, true);
+        }
+        // notify.*, autoweed and other keys fall through.
         return false;
+    }
+
+    private boolean applyTickOffset(long accountHash, String value, boolean precision)
+    {
+        AccountState acc = state.touch(accountHash);
+        Integer parsed = null;
+        if (value != null && !value.isEmpty())
+        {
+            try { parsed = Integer.parseInt(value); }
+            catch (NumberFormatException ignored) { return false; }
+        }
+        if (precision) acc.setFarmTickOffsetPrecision(parsed);
+        else acc.setFarmTickOffset(parsed);
+        return true;
     }
 
     private boolean applyVarbit(long accountHash, int regionId, int varbitId, String value)

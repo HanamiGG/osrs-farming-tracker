@@ -123,6 +123,8 @@ public final class JsonCodec
         a.hash = Long.toUnsignedString(acc.getHash());
         a.displayName = acc.getDisplayName();
         a.lastSeen = acc.getLastSeen();
+        a.farmTickOffset = acc.getFarmTickOffset();
+        a.farmTickOffsetPrecision = acc.getFarmTickOffsetPrecision();
         a.patches = new ArrayList<>(acc.patches().values());
         return a;
     }
@@ -143,6 +145,8 @@ public final class JsonCodec
         String hash;
         String displayName;
         Instant lastSeen;
+        Integer farmTickOffset;
+        Integer farmTickOffsetPrecision;
         List<PatchState> patches;
     }
 

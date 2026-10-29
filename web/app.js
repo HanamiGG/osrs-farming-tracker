@@ -234,23 +234,49 @@
     p.region = p.region || region.name + (patchMeta.name ? ` (${patchMeta.name})` : '');
     const ranges = dec.implementations[patchMeta.implementation] || [];
     const hit = ranges.find(r => p.varbitValue >= r.lo && p.varbitValue <= r.hi);
-    if (hit) {
-      p.produce = p.produce || hit.produce;
-      p.state = p.state || hit.state;
-      if (p.state === 'GROWING' && hit.produce && p.lastUpdated) {
-        const prod = dec.produce[hit.produce];
-        if (prod) {
-          // ticks remaining to leave the GROWING range → first HARVESTABLE varbit
-          const ticksRemaining = Math.max(0, hit.hi + 1 - p.varbitValue);
-          const minutes = ticksRemaining * prod.tickrate * FARMING_TICK_MINUTES;
-          p.cycleStartedAt = p.cycleStartedAt || p.lastUpdated;
-          p.readyAt = p.readyAt || new Date(Date.parse(p.lastUpdated) + minutes * 60_000).toISOString();
-        }
-      } else if (p.state === 'HARVESTABLE') {
-        p.readyAt = p.readyAt || p.lastUpdated;
+    if (!hit) return p;
+    p.produce = p.produce || hit.produce;
+    p.state = p.state || hit.state;
+
+    if (p.state === 'GROWING' && hit.produce && p.lastUpdated) {
+      const prod = dec.produce[hit.produce];
+      if (prod && prod.tickrate > 0) {
+        // Port of FarmingTracker.predictPatch (RuneLite BSD-2):
+        //   tickTime     = getTickTime(tickrate, 0, observed)
+        //   doneEstimate = tickTime + (stages - 1 - stage) * tickrate * 60s
+        // Stage within the GROWING range is value - lo (ascending encoding).
+        const stage = p.varbitValue - hit.lo;
+        const stagesRemaining = Math.max(0, prod.stages - 1 - stage);
+        const observedUnix = Math.floor(Date.parse(p.lastUpdated) / 1000);
+        const tickTime = alignToFarmTick(observedUnix, prod.tickrate, p._acc);
+        const readyAtUnix = tickTime + stagesRemaining * prod.tickrate * 60;
+        p.cycleStartedAt = p.cycleStartedAt || p.lastUpdated;
+        p.readyAt = p.readyAt || new Date(readyAtUnix * 1000).toISOString();
       }
+    } else if (p.state === 'HARVESTABLE') {
+      p.readyAt = p.readyAt || p.lastUpdated;
     }
     return p;
+  }
+
+  // Port of FarmingTracker.getTickTime(tickRate, 0, requestedTime, profile).
+  // Returns the unix-seconds timestamp of the farming tick that contains
+  // `requestedUnix`, respecting the account's observed tick offset when its
+  // precision is good enough (>= tickRate, or >= 40 min which covers all
+  // tree-type ticks). Offsets are stored as positive but represent negative
+  // shifts, per the FarmingTracker comment.
+  function alignToFarmTick(requestedUnix, tickRateMin, acc) {
+    let offsetSec = 0;
+    if (acc && acc.farmTickOffset != null && acc.farmTickOffsetPrecision != null) {
+      const prec = acc.farmTickOffsetPrecision;
+      if (prec >= tickRateMin || prec >= 40) {
+        offsetSec = (acc.farmTickOffset % tickRateMin) * 60;
+      }
+    }
+    const shifted = requestedUnix + offsetSec;
+    const period = tickRateMin * 60;
+    const tickStart = shifted - (shifted % period);
+    return tickStart - offsetSec;
   }
 
   function renderBoard(patches) {

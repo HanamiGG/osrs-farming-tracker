@@ -20,9 +20,16 @@
   all included)
 
 **Still rough / deferred:**
-- `readyAt` countdown is approximate (ignores `FARM_TICK_OFFSET` precision)
 - No patch icons yet
 - Plugin Hub submission not prepped
+
+**readyAt is now tick-aligned.** Plugin mirrors `farmTickOffset` and
+`farmTickOffsetPrecision` from the stock tracker's RSProfile config;
+web port of `FarmingTracker.getTickTime` applies the offset when
+precision ≥ tickrate (or ≥ 40). First-time players will see a naive
+countdown until the stock plugin observes an exact growth tick (which
+happens on the first in-session patch transition the player witnesses);
+after that, countdowns match the stock plugin's.
 
 ## What this is
 
