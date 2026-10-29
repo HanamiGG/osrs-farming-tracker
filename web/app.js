@@ -47,7 +47,7 @@
       .then(d => {
         if (!d) return;
         STATE.decoder = d;
-        rebuildVarbitInv();
+        onDecoderLoaded();
         renderAll();
       })
       .catch(() => {});
@@ -55,11 +55,19 @@
 
   function rebuildVarbitInv() {
     STATE.varbitInv = {};
-    const map = STATE.data && STATE.data.varbitMap;
+    // Prefer the live varbit map from the plugin (always current), fall back
+    // to the one shipped in patch-decoder.json so the dashboard works even
+    // without a connected plugin.
+    const map = (STATE.data && STATE.data.varbitMap) || (STATE.decoder && STATE.decoder.varbitMap);
     if (!map) return;
     for (const [sym, id] of Object.entries(map)) {
       STATE.varbitInv[id] = sym;
     }
+  }
+
+  // Rebuild varbit inverse whenever either source lands.
+  function onDecoderLoaded() {
+    rebuildVarbitInv();
   }
 
   function bindUi() {
@@ -184,7 +192,7 @@
     populateAccountSelect();
     const d = currentAccountPatches();
     renderSummary(d);
-    if (STATE.view === 'board')    renderBoard(d);
+    if (STATE.view === 'board')    renderBoard();
     if (STATE.view === 'timeline') renderTimeline(d);
     if (STATE.view === 'planner')  renderPlanner(d);
   }
@@ -235,12 +243,62 @@
   }
 
   function currentAccountPatches() {
-    if (!STATE.data) return [];
-    const accs = STATE.data.accounts || [];
+    const accs = (STATE.data && STATE.data.accounts) || [];
     const slice = STATE.account === 'ALL'
       ? accs.flatMap(a => (a.patches || []).map(p => ({ ...p, _acc: a })))
       : (accs.find(a => a.hash === STATE.account)?.patches || []).map(p => ({ ...p, _acc: accs.find(a => a.hash === STATE.account) }));
     return slice.map(enrichPatch);
+  }
+
+  // Build the FULL catalog of every farming patch in the world, overlaying
+  // live data where available. Patches with no live data get a synthetic
+  // "UNTRACKED" state so the dashboard shows the complete farming map
+  // instead of just the handful the player has visited.
+  function allPatchesFromCatalog() {
+    const dec = STATE.decoder;
+    if (!dec || !dec.regions) return [];
+    const live = currentAccountPatches();
+    const byKey = new Map();
+    for (const p of live) {
+      byKey.set(`${p.regionId}.${p.varbitId}`, p);
+    }
+    const out = [];
+    for (const region of dec.regions) {
+      for (const patchDef of region.patches) {
+        const varbitInt = (dec.varbitMap || {})[patchDef.varbit];
+        if (!varbitInt) continue;
+        const key = `${region.regionId}.${varbitInt}`;
+        const hit = byKey.get(key);
+        if (hit) {
+          out.push(hit);
+        } else {
+          out.push({
+            id: key,
+            regionId: region.regionId,
+            varbitId: varbitInt,
+            region: region.name + (patchDef.name ? ` (${patchDef.name})` : ''),
+            implementation: patchDef.implementation,
+            produce: null,
+            state: 'UNTRACKED',
+            _synthetic: true,
+          });
+        }
+      }
+    }
+    return out;
+  }
+
+  // Sort order within each group: ready > soon > growing > diseased > dead > untracked > empty.
+  function patchSortKey(p) {
+    const order = { HARVESTABLE: 0, GROWING: 2, DISEASED: 4, DEAD: 5, EMPTY: 6, UNCHECKED: 6, FILLING: 2, UNTRACKED: 7 };
+    const now = Date.now();
+    const base = order[p.state] ?? 3;
+    if (p.state === 'GROWING' && p.readyAt) {
+      const r = Date.parse(p.readyAt);
+      if (r - now < NEAR_READY_MS) return 1;      // soon
+      return 2 + Math.min(1, (r - now) / (24 * 60 * 60 * 1000));
+    }
+    return base;
   }
 
   // Enrich a raw patch (regionId + varbitId + varbitValue) with human-readable
@@ -308,28 +366,63 @@
     return tickStart - offsetSec;
   }
 
-  function renderBoard(patches) {
+  function renderBoard() {
     const root = document.getElementById('view-board');
-    if (!patches.length) {
-      root.innerHTML = `<p class="empty">${STATE.data ? 'No patches tracked yet. Visit a farming patch in-game to seed state.' : 'Waiting for plugin…'}</p>`;
+    if (!STATE.decoder) {
+      root.innerHTML = `<p class="empty">Loading patch catalog…</p>`;
       return;
     }
+    const all = allPatchesFromCatalog();
+    const live = all.filter(p => !p._synthetic);
+    const tracked = live.length;
+
+    const hint = (!STATE.data)
+      ? `<div class="onboard">
+          <h3>Connect the plugin</h3>
+          <p>No data from the plugin yet. In RuneLite's Farmwatch config, make sure <strong>Enable HTTP server</strong> is on, then come back. You can also drop a <code>state-*.json</code> snapshot into the Connection panel below for an offline view.</p>
+        </div>`
+      : (tracked === 0)
+        ? `<div class="onboard subtle">
+            <h3>Visit a patch to populate state</h3>
+            <p>Connected, but no farming activity recorded yet. The stock Time Tracking plugin only reads a patch when you're near it — go check a herb patch and this board will light up.</p>
+          </div>`
+        : '';
+
+    // Group by implementation; sort within each group by patchSortKey.
     const groups = {};
-    for (const p of patches) {
+    for (const p of all) {
       const key = p.implementation || 'OTHER';
       (groups[key] = groups[key] || []).push(p);
     }
+    const order = ['HERB','ALLOTMENT','TREE','FRUIT_TREE','BUSH','HOPS','CACTUS','FLOWER','MUSHROOM','HARDWOOD_TREE','ANIMA','CORAL','SEAWEED','GRAPES','CALQUAT','SPIRIT_TREE','CELASTRUS','CRYSTAL_TREE','REDWOOD','BELLADONNA','HESPORI','COMPOST','BIG_COMPOST','OTHER'];
+    const seen = new Set();
     const parts = [];
-    const order = ['HERB','ALLOTMENT','TREE','FRUIT_TREE','BUSH','HOP','CACTUS','FLOWER','MUSHROOM','SPECIAL','OTHER'];
     for (const imp of order) {
       if (!groups[imp]) continue;
+      seen.add(imp);
+      groups[imp].sort((a, b) => patchSortKey(a) - patchSortKey(b));
+      const liveInGroup = groups[imp].filter(p => !p._synthetic).length;
+      const total = groups[imp].length;
+      const countChip = liveInGroup < total
+        ? `<span class="count">${liveInGroup}/${total}</span>`
+        : `<span class="count">${total}</span>`;
       const collapsed = safeGet(LS.collapsed(imp)) === '1';
       parts.push(`<section class="group ${collapsed?'collapsed':''}" data-imp="${imp}">
+        <h2 class="group-title">${esc(prettyImp(imp))} ${countChip}</h2>
+        <div class="cards">${groups[imp].map(cardHtml).join('')}</div>
+      </section>`);
+    }
+    // Catch any implementation not in the explicit order list.
+    for (const imp of Object.keys(groups)) {
+      if (seen.has(imp)) continue;
+      groups[imp].sort((a, b) => patchSortKey(a) - patchSortKey(b));
+      parts.push(`<section class="group" data-imp="${imp}">
         <h2 class="group-title">${esc(prettyImp(imp))} <span class="count">${groups[imp].length}</span></h2>
         <div class="cards">${groups[imp].map(cardHtml).join('')}</div>
       </section>`);
     }
-    root.innerHTML = parts.join('');
+
+    root.innerHTML = hint + parts.join('');
     root.querySelectorAll('.group-title').forEach(h => {
       h.addEventListener('click', () => {
         const g = h.closest('.group');
@@ -352,7 +445,10 @@
     const timeLabel = p.state === 'HARVESTABLE' ? 'Ready'
       : p.state === 'DEAD' ? 'Dead'
       : p.state === 'DISEASED' ? 'Diseased'
-      : p.state === 'EMPTY' || p.state === 'UNCHECKED' ? '—'
+      : p.state === 'EMPTY' ? 'Empty'
+      : p.state === 'UNCHECKED' ? 'Check'
+      : p.state === 'UNTRACKED' ? '—'
+      : p.state === 'FILLING' ? 'Filling'
       : ready ? formatRemaining(remaining) : '—';
 
     const circ = ringSvg(frac);
@@ -366,9 +462,17 @@
       ? `<img class="produce-icon" loading="lazy" alt="" referrerpolicy="no-referrer" src="https://oldschool.runescape.wiki/images/${esc(p.wikiFile)}" onerror="this.remove()">`
       : '';
 
-    return `<article class="card ${stateCls}">
+    // For untracked patches, show the implementation name as the main
+    // label (there's no produce to display).
+    const produceLabel = p.produce
+      ? prettyProduce(p.produce)
+      : (p.state === 'UNTRACKED' ? prettyImp(p.implementation || '?') : 'Empty');
+
+    const extraCls = p._synthetic ? 'card-synthetic' : '';
+
+    return `<article class="card ${stateCls} ${extraCls}">
       <header>
-        <span class="produce">${icon}${esc(prettyProduce(p.produce))}</span>
+        <span class="produce">${icon}${esc(produceLabel)}</span>
         <span class="region">${esc(prettyRegion(p.region))}</span>
       </header>
       <div class="ring-wrap">${circ}<span class="time" ${ready?`data-ready-at="${esc(p.readyAt)}"`:''}>${esc(timeLabel)}</span></div>
@@ -437,7 +541,8 @@
     if (p.state === 'DEAD')        return 'st-dead';
     if (p.state === 'DISEASED')    return 'st-diseased';
     if (p.state === 'HARVESTABLE') return 'st-ready';
-    if (p.state === 'EMPTY' || p.state === 'UNCHECKED') return 'st-neutral';
+    if (p.state === 'UNTRACKED')   return 'st-untracked';
+    if (p.state === 'EMPTY' || p.state === 'UNCHECKED' || p.state === 'FILLING') return 'st-neutral';
     if (readyAtMs && readyAtMs - Date.now() < NEAR_READY_MS) return 'st-soon';
     return 'st-growing';
   }

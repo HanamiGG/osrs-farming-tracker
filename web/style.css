@@ -275,6 +275,34 @@ body {
 .card.st-dead     { border-left-color: var(--dead);     }
 .card.st-dead     .ring-fg { stroke: var(--dead); }
 .card.st-neutral  { border-left-color: var(--neutral);  }
+.card.st-untracked{ border-left-color: var(--rule);     }
+.card.st-untracked .ring-fg { stroke: var(--rule); }
+
+/* Synthetic cards (every patch in the world, with no live data yet) are
+   dimmed so the real/live cards pop. */
+.card-synthetic {
+  opacity: 0.55;
+  background: transparent;
+}
+.card-synthetic .produce { color: var(--ink-dim); font-weight: 500; }
+
+.onboard {
+  background: var(--bg-elev);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 0 0 18px;
+}
+.onboard.subtle { border-color: var(--rule); }
+.onboard h3 { margin: 0 0 4px; color: var(--accent); font-size: 15px; }
+.onboard.subtle h3 { color: var(--ink); }
+.onboard p { margin: 0; color: var(--ink-dim); font-size: 13px; }
+.onboard code {
+  background: var(--bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 12px;
+}
 
 .timeline { display: grid; gap: 6px; }
 .tl-row {

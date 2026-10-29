@@ -1,5 +1,14 @@
 {
-  "_source": "Ported from RuneLite net.runelite.client.plugins.timetracking.farming.* (FarmingWorld, PatchImplementation, Produce). BSD-2-Clause. Copyright 2018-2024 Abex and contributors.",
+  "_source": "Ported from RuneLite net.runelite.client.plugins.timetracking.farming.* (FarmingWorld, PatchImplementation, Produce) and net.runelite.api.gameval.VarbitID. BSD-2-Clause. Copyright 2018-2024 Abex and contributors.",
+  "varbitMap": {
+    "FARMING_TRANSMIT_A":  4771, "FARMING_TRANSMIT_B":  4772, "FARMING_TRANSMIT_C":  4773, "FARMING_TRANSMIT_D":  4774, "FARMING_TRANSMIT_E":  4775,
+    "FARMING_TRANSMIT_A1": 4953, "FARMING_TRANSMIT_A2": 4954, "FARMING_TRANSMIT_B1": 4955, "FARMING_TRANSMIT_B2": 4956,
+    "FARMING_TRANSMIT_C1": 4957, "FARMING_TRANSMIT_C2": 4958, "FARMING_TRANSMIT_D1": 4959, "FARMING_TRANSMIT_D2": 4960,
+    "FARMING_TRANSMIT_E1": 4961, "FARMING_TRANSMIT_E2": 4962, "FARMING_TRANSMIT_F1": 4963, "FARMING_TRANSMIT_F2": 4964,
+    "FARMING_TRANSMIT_F":  7904, "FARMING_TRANSMIT_G":  7905, "FARMING_TRANSMIT_H":  7906, "FARMING_TRANSMIT_I":  7907,
+    "FARMING_TRANSMIT_J":  7908, "FARMING_TRANSMIT_K":  7909, "FARMING_TRANSMIT_L":  7910, "FARMING_TRANSMIT_M":  7911,
+    "FARMING_TRANSMIT_N":  7912, "FARMING_TRANSMIT_O":  7913, "FARMING_TRANSMIT_P":  7914
+  },
   "regions": [
     {"regionId": 13106, "name": "Al Kharid",                "finite": false, "patches": [{"varbit": "FARMING_TRANSMIT_A", "implementation": "CACTUS",       "name": ""}]},
     {"regionId": 5421,  "name": "Aldarin",                  "finite": false, "patches": [{"varbit": "FARMING_TRANSMIT_A", "implementation": "HOPS",         "name": ""}]},
