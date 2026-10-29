@@ -407,10 +407,15 @@
       {"lo":46,"hi":51,"produce":"POTATO_CACTUS","state":"DISEASED"},{"lo":52,"hi":57,"produce":"POTATO_CACTUS","state":"DEAD"}
     ],
     "CORAL": [
-      {"lo":4,"hi":7,"produce":"ELKHORN_CORAL","state":"GROWING"}, {"lo":9,"hi":11,"produce":"ELKHORN_CORAL","state":"DISEASED"},
+      {"lo":4, "hi":8, "produce":"ELKHORN_CORAL","state":"GROWING"},
+      {"lo":9, "hi":11,"produce":"ELKHORN_CORAL","state":"DISEASED"},
       {"lo":12,"hi":14,"produce":"ELKHORN_CORAL","state":"DEAD"},
-      {"lo":15,"hi":18,"produce":"PILLAR_CORAL","state":"GROWING"},{"lo":20,"hi":22,"produce":"PILLAR_CORAL","state":"DISEASED"},
-      {"lo":23,"hi":25,"produce":"PILLAR_CORAL","state":"DEAD"}
+      {"lo":15,"hi":19,"produce":"PILLAR_CORAL", "state":"GROWING"},
+      {"lo":20,"hi":22,"produce":"PILLAR_CORAL", "state":"DISEASED"},
+      {"lo":23,"hi":25,"produce":"PILLAR_CORAL", "state":"DEAD"},
+      {"lo":26,"hi":30,"produce":"UMBRAL_CORAL", "state":"GROWING"},
+      {"lo":31,"hi":33,"produce":"UMBRAL_CORAL", "state":"DISEASED"},
+      {"lo":34,"hi":36,"produce":"UMBRAL_CORAL", "state":"DEAD"}
     ],
     "MUSHROOM": [
       {"lo":4,"hi":9,"produce":"MUSHROOM","state":"GROWING"},
@@ -421,6 +426,62 @@
     "HESPORI": [
       {"lo":4,"hi":6,"produce":"HESPORI","state":"GROWING"},
       {"lo":7,"hi":8,"produce":"HESPORI","state":"HARVESTABLE"}
+    ],
+    "SEAWEED": [
+      {"lo":4,"hi":7,"produce":"SEAWEED","state":"GROWING"},
+      {"lo":8,"hi":10,"produce":"SEAWEED","state":"HARVESTABLE"},
+      {"lo":11,"hi":13,"produce":"SEAWEED","state":"DISEASED"},
+      {"lo":14,"hi":16,"produce":"SEAWEED","state":"DEAD"}
+    ],
+    "GRAPES": [
+      {"lo":2,"hi":10,"produce":"GRAPE","state":"GROWING"},
+      {"lo":11,"hi":15,"produce":"GRAPE","state":"HARVESTABLE"}
+    ],
+    "CALQUAT": [
+      {"lo":4,"hi":11,"produce":"CALQUAT","state":"GROWING"},
+      {"lo":12,"hi":18,"produce":"CALQUAT","state":"HARVESTABLE"},
+      {"lo":19,"hi":25,"produce":"CALQUAT","state":"DISEASED"},
+      {"lo":26,"hi":33,"produce":"CALQUAT","state":"DEAD"},
+      {"lo":34,"hi":34,"produce":"CALQUAT","state":"GROWING"}
+    ],
+    "CELASTRUS": [
+      {"lo":8,"hi":12,"produce":"CELASTRUS","state":"GROWING"},
+      {"lo":13,"hi":13,"produce":"CELASTRUS","state":"GROWING"},
+      {"lo":14,"hi":17,"produce":"CELASTRUS","state":"HARVESTABLE"},
+      {"lo":18,"hi":22,"produce":"CELASTRUS","state":"DISEASED"},
+      {"lo":23,"hi":27,"produce":"CELASTRUS","state":"DEAD"},
+      {"lo":28,"hi":28,"produce":"CELASTRUS","state":"HARVESTABLE"}
+    ],
+    "CRYSTAL_TREE": [
+      {"lo":8,"hi":14,"produce":"CRYSTAL_TREE","state":"GROWING"},
+      {"lo":15,"hi":15,"produce":"CRYSTAL_TREE","state":"HARVESTABLE"}
+    ],
+    "COMPOST": [
+      {"lo":0, "hi":0,  "produce":null,          "state":"EMPTY"},
+      {"lo":1, "hi":15, "produce":"COMPOST",     "state":"FILLING"},
+      {"lo":16,"hi":30, "produce":"COMPOST",     "state":"HARVESTABLE"},
+      {"lo":31,"hi":32, "produce":"COMPOST",     "state":"GROWING"},
+      {"lo":33,"hi":47, "produce":"SUPERCOMPOST","state":"FILLING"},
+      {"lo":48,"hi":62, "produce":"SUPERCOMPOST","state":"HARVESTABLE"},
+      {"lo":94,"hi":94, "produce":"COMPOST",     "state":"GROWING"},
+      {"lo":95,"hi":96, "produce":"SUPERCOMPOST","state":"GROWING"},
+      {"lo":126,"hi":126,"produce":"SUPERCOMPOST","state":"GROWING"},
+      {"lo":176,"hi":190,"produce":"ULTRACOMPOST","state":"HARVESTABLE"}
+    ],
+    "BIG_COMPOST": [
+      {"lo":0,  "hi":0,   "produce":null,              "state":"EMPTY"},
+      {"lo":1,  "hi":15,  "produce":"BIG_COMPOST",     "state":"FILLING"},
+      {"lo":16, "hi":30,  "produce":"BIG_COMPOST",     "state":"HARVESTABLE"},
+      {"lo":33, "hi":47,  "produce":"BIG_SUPERCOMPOST","state":"FILLING"},
+      {"lo":48, "hi":62,  "produce":"BIG_SUPERCOMPOST","state":"HARVESTABLE"},
+      {"lo":63, "hi":77,  "produce":"BIG_COMPOST",     "state":"FILLING"},
+      {"lo":78, "hi":92,  "produce":"BIG_COMPOST",     "state":"HARVESTABLE"},
+      {"lo":93, "hi":93,  "produce":"BIG_COMPOST",     "state":"GROWING"},
+      {"lo":97, "hi":99,  "produce":"BIG_SUPERCOMPOST","state":"GROWING"},
+      {"lo":100,"hi":114, "produce":"BIG_SUPERCOMPOST","state":"HARVESTABLE"},
+      {"lo":127,"hi":128, "produce":"BIG_COMPOST",     "state":"GROWING"},
+      {"lo":161,"hi":175, "produce":"BIG_SUPERCOMPOST","state":"FILLING"},
+      {"lo":176,"hi":205, "produce":"BIG_ULTRACOMPOST","state":"HARVESTABLE"}
     ]
   }
 }

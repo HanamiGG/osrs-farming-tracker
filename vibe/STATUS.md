@@ -2,12 +2,27 @@
 
 **Project:** osrs-farming-tracker (working name "Farmwatch")
 **Location:** `C:\HeadroomAI\osrs-farming-tracker`
-**Last update:** 2026-10-29 (automated setup complete)
+**Last update:** 2026-10-29 (decoder + compost/protection + prime-on-login)
 
 **Live:**
 - Repo: https://github.com/HanamiGG/osrs-farming-tracker (public)
 - Dashboard: https://hanamigg.github.io/osrs-farming-tracker/
 - JDK 11 installed, Gradle wrapper committed, `./gradlew build` green.
+
+**Working:**
+- Loopback HTTP server + file snapshot
+- Config mirror of varbit, compost tier, protection payment
+- Prime-on-login via `ConfigManager#getRSProfileConfigurationKeys` — patches
+  appear in the dashboard immediately when the player logs in, without
+  needing to re-visit them
+- Web decoder: 43 regions, 85 produce varieties, 23 implementations
+  (SEAWEED/GRAPES/CELASTRUS/CRYSTAL_TREE/CALQUAT/COMPOST/BIG_COMPOST
+  all included)
+
+**Still rough / deferred:**
+- `readyAt` countdown is approximate (ignores `FARM_TICK_OFFSET` precision)
+- No patch icons yet
+- Plugin Hub submission not prepped
 
 ## What this is
 

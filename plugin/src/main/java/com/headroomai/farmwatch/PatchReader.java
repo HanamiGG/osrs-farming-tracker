@@ -3,6 +3,7 @@ package com.headroomai.farmwatch;
 import com.headroomai.farmwatch.model.AccountState;
 import com.headroomai.farmwatch.model.PatchState;
 import java.time.Instant;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -12,36 +13,24 @@ import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
 
 /**
- * Reads farming state by mirroring the stock Time Tracking plugin's config,
- * NOT by trying to iterate FarmingPatch.values() — that enum is
- * package-private in net.runelite.client.plugins.timetracking.farming so a
- * third-party plugin cannot reach it directly.
+ * Mirrors the stock Time Tracking plugin's config into our state.
  *
- * Config format persisted by the stock tracker (confirmed from source):
+ * Stock plugin key formats (confirmed from source):
+ *   timetracking.<rsprofile>.<regionID>.<varbitID>          = "<varbitValue>:<unixTime>"
+ *   timetracking.<rsprofile>.<regionID>.<varbitID>.compost  = "<CompostState enum name>"
+ *   timetracking.<rsprofile>.<regionID>.<varbitID>.protected= "true"  (key unset when false)
  *
- *   group = "timetracking"
- *   key   = "<regionID>.<varbitID>"      (both ints)
- *   value = "<varbitValue>:<unixTime>"
- *   stored per-RSProfile.
- *
- * We listen for ConfigChanged on that group and mirror each entry into our
- * PatchState keyed by "<regionID>.<varbitID>". Decoding regionID/varbitID
- * into a human-readable patch name + produce happens on the web side via a
- * decoder table (web/patch-decoder.json, TODO v1.1 — v1 ships with the
- * raw numeric data and a stub decoder for a handful of common patches).
- *
- * Compost + protection are tracked by the stock plugin's CompostTracker /
- * PaymentTracker siblings under different config key patterns. Mirroring
- * those is deferred to v1.1 — see TODO below.
+ * On login we prime from the current RSProfile via
+ * ConfigManager#getRSProfileConfigurationKeys so previously-seen patches
+ * appear immediately. ConfigChanged events keep state live afterwards.
  */
 @Slf4j
 public class PatchReader
 {
-    /** Matches the stock tracker's key shape: "<regionID>.<varbitID>", both ints. */
-    private static final Pattern KEY_PATTERN = Pattern.compile("^(\\d+)\\.(\\d+)$");
-
-    /** Matches the stock tracker's value shape: "<varbitValue>:<unixTime>". */
-    private static final Pattern VALUE_PATTERN = Pattern.compile("^(-?\\d+):(\\d+)$");
+    private static final Pattern VARBIT_KEY     = Pattern.compile("^(\\d+)\\.(\\d+)$");
+    private static final Pattern COMPOST_KEY    = Pattern.compile("^(\\d+)\\.(\\d+)\\.compost$");
+    private static final Pattern PROTECTED_KEY  = Pattern.compile("^(\\d+)\\.(\\d+)\\.protected$");
+    private static final Pattern VARBIT_VALUE   = Pattern.compile("^(-?\\d+):(\\d+)$");
 
     private final Client client;
     private final ConfigManager configManager;
@@ -55,103 +44,127 @@ public class PatchReader
     }
 
     /**
-     * Called on login — pull all currently-persisted stock tracker entries
-     * for the active RSProfile and copy them into our state.
-     *
-     * TODO(prime): the exact ConfigManager API for listing keys under a
-     * profile isn't bullet-proof here. In the current RuneLite master,
-     * ConfigManager has getConfigurationKeys(String prefix) that returns
-     * fully-qualified keys of the form "<group>.<profile>.<key>". A safer
-     * initial implementation iterates those and filters for ones matching
-     * KEY_PATTERN after the profile segment. Flip to that when wiring.
-     *
-     * For now this is a no-op; the per-event handler below will populate
-     * state as the user moves around and the stock tracker emits updates.
+     * Called on login. Pulls every timetracking entry stored for the current
+     * RSProfile and mirrors it into our state, so the dashboard is useful
+     * before the user re-visits anything.
      */
     public void primeFromStockTracker(long accountHash)
     {
-        log.debug("primeFromStockTracker({}) - deferred, see TODO in PatchReader", accountHash);
+        String profile = configManager.getRSProfileKey();
+        if (profile == null)
+        {
+            log.debug("Farmwatch prime skipped: no active RSProfile");
+            return;
+        }
+        List<String> keys;
+        try
+        {
+            keys = configManager.getRSProfileConfigurationKeys("timetracking", profile, "");
+        }
+        catch (Throwable t)
+        {
+            log.warn("Farmwatch prime: getRSProfileConfigurationKeys failed", t);
+            return;
+        }
+        int applied = 0;
+        for (String key : keys)
+        {
+            String value = configManager.getRSProfileConfiguration("timetracking", key);
+            if (applyKey(accountHash, key, value)) applied++;
+        }
+        log.debug("Farmwatch prime: {}/{} timetracking entries mirrored for account {}",
+            applied, keys.size(), accountHash);
     }
 
     /**
      * Varbit changes themselves don't carry useful data for us — the stock
      * tracker processes them, decodes them, and persists via ConfigChanged
-     * downstream, which is where we pick them up. So this is a no-op.
-     *
-     * @return false, always.
+     * downstream, which is where we pick them up.
      */
     public boolean handleVarbit(VarbitChanged e)
     {
         return false;
     }
 
-    /**
-     * Mirror the stock tracker's per-patch config entries into our state.
-     *
-     * @return true if we matched and copied a timetracking patch entry.
-     */
     public boolean handleStockConfigChange(ConfigChanged e)
     {
-        if (!"timetracking".equals(e.getGroup()))
+        if (!"timetracking".equals(e.getGroup())) return false;
+        long accountHash = client.getAccountHash();
+        if (accountHash == -1) return false;
+        return applyKey(accountHash, e.getKey(), e.getNewValue());
+    }
+
+    private boolean applyKey(long accountHash, String key, String value)
+    {
+        if (key == null) return false;
+
+        Matcher m = VARBIT_KEY.matcher(key);
+        if (m.matches())
         {
-            return false;
+            return applyVarbit(accountHash, Integer.parseInt(m.group(1)),
+                Integer.parseInt(m.group(2)), value);
         }
-
-        String key = e.getKey();
-        if (key == null)
+        m = COMPOST_KEY.matcher(key);
+        if (m.matches())
         {
-            return false;
+            return applyCompost(accountHash, Integer.parseInt(m.group(1)),
+                Integer.parseInt(m.group(2)), value);
         }
-
-        Matcher km = KEY_PATTERN.matcher(key);
-        if (!km.matches())
+        m = PROTECTED_KEY.matcher(key);
+        if (m.matches())
         {
-            // Not a "<regionID>.<varbitID>" entry — could be compost, payment,
-            // notify flags, autoweed, or FARM_TICK_OFFSET. v1 ignores those.
-            // TODO(v1.1): recognize compost.* and payment.* keys and mirror
-            // them into PatchState.compost / PatchState.protectedPaid.
-            return false;
+            return applyProtected(accountHash, Integer.parseInt(m.group(1)),
+                Integer.parseInt(m.group(2)), value);
         }
+        // notify.*, autoweed, FARM_TICK_OFFSET and other keys fall through.
+        return false;
+    }
 
-        int regionId = Integer.parseInt(km.group(1));
-        int varbitId = Integer.parseInt(km.group(2));
-
-        String value = e.getNewValue();
-        if (value == null || value.isEmpty())
-        {
-            return false;
-        }
-
-        Matcher vm = VALUE_PATTERN.matcher(value);
+    private boolean applyVarbit(long accountHash, int regionId, int varbitId, String value)
+    {
+        if (value == null || value.isEmpty()) return false;
+        Matcher vm = VARBIT_VALUE.matcher(value);
         if (!vm.matches())
         {
-            log.debug("Farmwatch: timetracking key {} has unexpected value shape {}", key, value);
+            log.debug("Farmwatch: {}.{} unexpected value {}", regionId, varbitId, value);
             return false;
         }
-
         int varbitValue = Integer.parseInt(vm.group(1));
         long unixTime = Long.parseLong(vm.group(2));
 
-        long accountHash = client.getAccountHash();
-        if (accountHash == -1)
-        {
-            return false;
-        }
+        PatchState p = upsert(accountHash, regionId, varbitId);
+        p.setVarbitValue(varbitValue);
+        p.setLastUpdated(Instant.ofEpochSecond(unixTime));
+        return true;
+    }
 
+    private boolean applyCompost(long accountHash, int regionId, int varbitId, String value)
+    {
+        PatchState p = upsert(accountHash, regionId, varbitId);
+        // Value is a CompostState enum name ("COMPOST", "SUPERCOMPOST", "ULTRACOMPOST")
+        // or null when the key was unset (which maps to "NONE" semantically).
+        p.setCompost(value);
+        return true;
+    }
+
+    private boolean applyProtected(long accountHash, int regionId, int varbitId, String value)
+    {
+        PatchState p = upsert(accountHash, regionId, varbitId);
+        p.setProtectedPaid("true".equalsIgnoreCase(value));
+        return true;
+    }
+
+    private PatchState upsert(long accountHash, int regionId, int varbitId)
+    {
         AccountState acc = state.touch(accountHash);
-        PatchState p = acc.patches().computeIfAbsent(key, k -> {
+        acc.setLastSeen(Instant.now());
+        String id = regionId + "." + varbitId;
+        return acc.patches().computeIfAbsent(id, k -> {
             PatchState ps = new PatchState();
             ps.setId(k);
             ps.setRegionId(regionId);
             ps.setVarbitId(varbitId);
             return ps;
         });
-        p.setVarbitValue(varbitValue);
-        p.setLastUpdated(Instant.ofEpochSecond(unixTime));
-        // state/produce/compost/protection are left as decoded by the web
-        // side (or empty, in which case the UI falls back to the raw view).
-        acc.setLastSeen(Instant.now());
-
-        return true;
     }
 }
