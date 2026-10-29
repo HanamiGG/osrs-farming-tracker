@@ -32,14 +32,19 @@ views.
 object to. Users enable it in the config panel; file snapshots work
 either way.
 
+**Plugin Hub submission ready to send.** `vibe/05_plugin_hub_submission.md`
+has the step-by-step. Repo is already restructured (plugin at root,
+icon.png in place, `build=standard` in properties, review-friendly
+description). All you have to do is fork plugin-hub, drop the
+`vibe/plugin-hub-manifest.txt` content at `plugins/farmwatch`, open the
+PR. Review turnaround ~1–2 weeks.
+
 **Deferred to v1.1+:**
-- Plugin Hub submission PR (fork runelite/plugin-hub, add manifest,
-  48x48 icon, open PR). Preparing this is the next big step toward
-  wider distribution.
+- Birdhouse timers (uses a separate storage pattern in the stock plugin
+  that we don't mirror yet — sibling package
+  `net.runelite.client.plugins.timetracking.hunter`).
 - Dark-mode variants of the summary chips (currently use the same
   colors in both themes).
-- Birdhouse timers (uses a separate storage pattern in the stock plugin
-  that we don't mirror yet).
 
 ## What this is
 
