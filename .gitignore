@@ -1,7 +1,8 @@
 # gradle
-plugin/.gradle/
-plugin/build/
-plugin/out/
+.gradle/
+build/
+out/
+*.class
 
 # IDEs
 .idea/

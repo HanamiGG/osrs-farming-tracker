@@ -17,7 +17,9 @@ falls back to drag-and-drop snapshot upload when it isn't.
 ## Repo layout
 
 ```
-plugin/   RuneLite plugin, Gradle, Java 11
+src/      RuneLite plugin source (Java 11)
+build.gradle, settings.gradle, gradlew, icon.png, runelite-plugin.properties
+          — standard Plugin Hub layout
 web/      Static dashboard (one HTML, one JS, one CSS; no build step)
 vibe/     Design docs and the "limitations" hard-truth list
 ```
@@ -27,7 +29,6 @@ vibe/     Design docs and the "limitations" hard-truth list
 Standard RuneLite plugin dev flow:
 
 ```bash
-cd plugin
 ./gradlew runClient
 ```
 

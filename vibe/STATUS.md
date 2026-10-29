@@ -8,6 +8,8 @@
 - Repo: https://github.com/HanamiGG/osrs-farming-tracker (public)
 - Dashboard: https://hanamigg.github.io/osrs-farming-tracker/
 - JDK 11 installed, Gradle wrapper committed, `./gradlew build` green.
+- Plugin lives at the repo root (standard Plugin Hub layout). Dev
+  launch: `./gradlew runClient` from the repo root.
 
 **Working:**
 - Loopback HTTP server + file snapshot
