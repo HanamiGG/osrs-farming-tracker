@@ -42,15 +42,23 @@
   });
 
   function loadDecoder() {
-    fetch('patch-decoder.json', { cache: 'no-store' })
-      .then(r => r.ok ? r.json() : null)
+    fetch('patch-decoder.json?v=' + Date.now(), { cache: 'no-store' })
+      .then(async r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + r.statusText);
+        const txt = await r.text();
+        try { return JSON.parse(txt); }
+        catch (e) { throw new Error('JSON parse: ' + e.message + ' (first bytes: ' + txt.slice(0, 60) + ')'); }
+      })
       .then(d => {
-        if (!d) return;
         STATE.decoder = d;
         onDecoderLoaded();
         renderAll();
       })
-      .catch(() => {});
+      .catch(err => {
+        STATE.decoderError = String(err && err.message || err);
+        console.error('[farmwatch] decoder load failed:', err);
+        renderAll();
+      });
   }
 
   function rebuildVarbitInv() {
@@ -369,7 +377,17 @@
   function renderBoard() {
     const root = document.getElementById('view-board');
     if (!STATE.decoder) {
-      root.innerHTML = `<p class="empty">Loading patch catalog…</p>`;
+      if (STATE.decoderError) {
+        root.innerHTML = `<div class="onboard">
+          <h3>Couldn't load patch catalog</h3>
+          <p>Tried to load <code>patch-decoder.json</code> but failed: <code>${esc(STATE.decoderError)}</code>.
+          If you're opening the <code>web/index.html</code> file directly via <code>file://</code>, browsers block relative <code>fetch()</code>.
+          Open the hosted site at <a href="https://hanamigg.github.io/osrs-farming-tracker/">hanamigg.github.io/osrs-farming-tracker</a>,
+          or run a tiny local server (<code>python -m http.server</code> inside <code>web/</code>) and visit <code>http://127.0.0.1:8000</code>.</p>
+        </div>`;
+      } else {
+        root.innerHTML = `<p class="empty">Loading patch catalog…</p>`;
+      }
       return;
     }
     const all = allPatchesFromCatalog();
