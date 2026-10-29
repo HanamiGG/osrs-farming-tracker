@@ -237,6 +237,9 @@
     if (!hit) return p;
     p.produce = p.produce || hit.produce;
     p.state = p.state || hit.state;
+    if (hit.produce && dec.produce[hit.produce]) {
+      p.wikiFile = p.wikiFile || dec.produce[hit.produce].wikiFile || null;
+    }
 
     if (p.state === 'GROWING' && hit.produce && p.lastUpdated) {
       const prod = dec.produce[hit.produce];
@@ -333,9 +336,13 @@
       ? `<span class="acc-tag">${esc(p._acc.displayName || p._acc.hash.slice(0,6))}</span>`
       : '';
 
+    const icon = p.wikiFile
+      ? `<img class="produce-icon" loading="lazy" alt="" referrerpolicy="no-referrer" src="https://oldschool.runescape.wiki/images/${esc(p.wikiFile)}" onerror="this.remove()">`
+      : '';
+
     return `<article class="card ${stateCls}">
       <header>
-        <span class="produce">${esc(prettyProduce(p.produce))}</span>
+        <span class="produce">${icon}${esc(prettyProduce(p.produce))}</span>
         <span class="region">${esc(prettyRegion(p.region))}</span>
       </header>
       <div class="ring-wrap">${circ}<span class="time" ${ready?`data-ready-at="${esc(p.readyAt)}"`:''}>${esc(timeLabel)}</span></div>

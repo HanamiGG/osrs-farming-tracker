@@ -221,7 +221,18 @@ body {
   gap: 8px;
   font-size: 14px;
 }
-.card .produce { font-weight: 600; }
+.card .produce {
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.card .produce-icon {
+  width: 20px;
+  height: 20px;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
 .card .region { color: var(--ink-dim); font-size: 12px; }
 .card footer {
   display: flex;
