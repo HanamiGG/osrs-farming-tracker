@@ -2,7 +2,12 @@
 
 **Project:** osrs-farming-tracker (working name "Farmwatch")
 **Location:** `C:\HeadroomAI\osrs-farming-tracker`
-**Last update:** 2026-10-28 (initial scaffold)
+**Last update:** 2026-10-29 (automated setup complete)
+
+**Live:**
+- Repo: https://github.com/HanamiGG/osrs-farming-tracker (public)
+- Dashboard: https://hanamigg.github.io/osrs-farming-tracker/
+- JDK 11 installed, Gradle wrapper committed, `./gradlew build` green.
 
 ## What this is
 
