@@ -31,7 +31,7 @@ public interface FarmwatchConfig extends Config
     )
     default String allowedOrigins()
     {
-        return "https://example.github.io,http://localhost:*,http://127.0.0.1:*,null";
+        return "https://hanamigg.github.io,http://localhost:*,http://127.0.0.1:*,null";
     }
 
     @ConfigItem(

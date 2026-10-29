@@ -79,7 +79,7 @@ unknown.
 
 Allowlist from `FarmwatchConfig#allowedOrigins` (comma-separated).
 Defaults:
-- `https://<github-user>.github.io` (user edits once; see STATUS.md).
+- `https://hanamigg.github.io` (the deployed Pages site).
 - `http://localhost:*` and `http://127.0.0.1:*` for dev.
 - `null` origin (for `file://` opens of the local HTML).
 

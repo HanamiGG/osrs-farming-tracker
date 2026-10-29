@@ -43,11 +43,8 @@ curl -s http://127.0.0.1:17060/state | jq
 with any static server.
 
 **Deployed:** `.github/workflows/pages.yml` publishes `web/` to GitHub
-Pages on push to `main`. Once Pages is enabled on the repo and the
-first push lands, the URL will be
-`https://<github-user>.github.io/osrs-farming-tracker/`.
-
-Then edit the plugin's `Allowed origins` config to include that URL.
+Pages on push to `main`. The live site is at
+`https://hanamigg.github.io/osrs-farming-tracker/`.
 
 ## Known limitations
 
