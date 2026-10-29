@@ -41,4 +41,8 @@ tasks.register('runClient', JavaExec) {
     // RuneLite's ExternalPluginManager.loadBuiltin requires JVM assertions
     // to be enabled so dev-mode plugins catch API misuse early.
     jvmArgs = ['-ea']
+    // --developer-mode enables the sidebar "Add Jagex Account" button and
+    // developer tools pane. Required if you log in via a Jagex Account
+    // (the mandatory flow for post-2023 accounts).
+    args = ['--developer-mode']
 }
