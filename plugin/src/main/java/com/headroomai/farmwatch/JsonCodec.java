@@ -8,11 +8,15 @@ import com.google.gson.stream.JsonWriter;
 import com.headroomai.farmwatch.model.AccountState;
 import com.headroomai.farmwatch.model.PatchState;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Centralized JSON encoding. Instant -> ISO-8601 UTC string. Account hash as
@@ -46,6 +50,7 @@ public final class JsonCodec
         env.version = FarmwatchState.SCHEMA_VERSION;
         env.generatedAt = state.generatedAt();
         env.pluginVersion = "0.1.0";
+        env.varbitMap = loadFarmingVarbitMap();
         for (AccountState acc : state.all())
         {
             env.accounts.add(toDto(acc));
@@ -59,8 +64,43 @@ public final class JsonCodec
         env.version = FarmwatchState.SCHEMA_VERSION;
         env.generatedAt = state.generatedAt();
         env.pluginVersion = "0.1.0";
+        env.varbitMap = loadFarmingVarbitMap();
         env.accounts.add(toDto(acc));
         return GSON.toJson(env).getBytes(StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Reflects net.runelite.api.gameval.VarbitID for FARMING_TRANSMIT_* fields so
+     * the web decoder can resolve FarmingWorld's symbolic patch references to the
+     * numeric varbit IDs that appear as keys in the exported state. Cached after
+     * the first call. If VarbitID is absent (shouldn't happen in a RuneLite plugin
+     * runtime), returns null and the web app falls back to raw-numeric mode.
+     */
+    private static volatile Map<String, Integer> varbitMapCache;
+
+    private static Map<String, Integer> loadFarmingVarbitMap()
+    {
+        Map<String, Integer> cached = varbitMapCache;
+        if (cached != null) return cached;
+        try
+        {
+            Class<?> cls = Class.forName("net.runelite.api.gameval.VarbitID");
+            Map<String, Integer> m = new TreeMap<>();
+            for (Field f : cls.getDeclaredFields())
+            {
+                if (!f.getName().startsWith("FARMING_TRANSMIT_")) continue;
+                if (!Modifier.isStatic(f.getModifiers())) continue;
+                if (!int.class.isAssignableFrom(f.getType())) continue;
+                f.setAccessible(true);
+                m.put(f.getName(), f.getInt(null));
+            }
+            varbitMapCache = m;
+            return m;
+        }
+        catch (Throwable t)
+        {
+            return null;
+        }
     }
 
     public static byte[] encodeAccountList(FarmwatchState state)
@@ -94,6 +134,7 @@ public final class JsonCodec
         int version;
         Instant generatedAt;
         String pluginVersion;
+        Map<String, Integer> varbitMap;
         List<AccountDto> accounts = new ArrayList<>();
     }
 

@@ -22,19 +22,45 @@
     view: safeGet(LS.view) || 'board',
     timer: null,
     offline: true,
+    decoder: null,
+    varbitInv: {},
   };
+
+  const FARMING_TICK_MINUTES = 5;
 
   // ------- boot -------
 
   document.addEventListener('DOMContentLoaded', () => {
     applyTheme(safeGet(LS.theme) || 'auto');
     bindUi();
+    loadDecoder();
     hydrateFromCache();
     setView(STATE.view);
     tryFetch();
     STATE.timer = setInterval(tryFetch, POLL_MS);
     setInterval(renderTicking, 1000);
   });
+
+  function loadDecoder() {
+    fetch('patch-decoder.json', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!d) return;
+        STATE.decoder = d;
+        rebuildVarbitInv();
+        renderAll();
+      })
+      .catch(() => {});
+  }
+
+  function rebuildVarbitInv() {
+    STATE.varbitInv = {};
+    const map = STATE.data && STATE.data.varbitMap;
+    if (!map) return;
+    for (const [sym, id] of Object.entries(map)) {
+      STATE.varbitInv[id] = sym;
+    }
+  }
 
   function bindUi() {
     document.querySelectorAll('.tab').forEach(t => {
@@ -111,6 +137,7 @@
         const json = await r.json();
         STATE.data = json;
         STATE.etag = etag;
+        rebuildVarbitInv();
         safeSet(LS.snapshot, JSON.stringify(json));
         setConnected(true);
         renderAll();
@@ -127,6 +154,7 @@
       try {
         STATE.data = JSON.parse(r.result);
         STATE.etag = null;
+        rebuildVarbitInv();
         safeSet(LS.snapshot, r.result);
         setConnected(false, 'snapshot');
         renderAll();
@@ -183,11 +211,46 @@
   function currentAccountPatches() {
     if (!STATE.data) return [];
     const accs = STATE.data.accounts || [];
-    if (STATE.account === 'ALL') {
-      return accs.flatMap(a => (a.patches || []).map(p => ({ ...p, _acc: a })));
+    const slice = STATE.account === 'ALL'
+      ? accs.flatMap(a => (a.patches || []).map(p => ({ ...p, _acc: a })))
+      : (accs.find(a => a.hash === STATE.account)?.patches || []).map(p => ({ ...p, _acc: accs.find(a => a.hash === STATE.account) }));
+    return slice.map(enrichPatch);
+  }
+
+  // Enrich a raw patch (regionId + varbitId + varbitValue) with human-readable
+  // fields using the decoder table. Idempotent: if produce/state already set
+  // (e.g. from a pre-decoded fixture), passes through unchanged.
+  function enrichPatch(p) {
+    if (!p || (p.produce && p.state && p.implementation)) return p;
+    const dec = STATE.decoder;
+    if (!dec) return p;
+    const sym = STATE.varbitInv[p.varbitId];
+    if (!sym) return p;
+    const region = dec.regions.find(r => r.regionId === p.regionId);
+    if (!region) return p;
+    const patchMeta = region.patches.find(x => x.varbit === sym);
+    if (!patchMeta) return p;
+    p.implementation = p.implementation || patchMeta.implementation;
+    p.region = p.region || region.name + (patchMeta.name ? ` (${patchMeta.name})` : '');
+    const ranges = dec.implementations[patchMeta.implementation] || [];
+    const hit = ranges.find(r => p.varbitValue >= r.lo && p.varbitValue <= r.hi);
+    if (hit) {
+      p.produce = p.produce || hit.produce;
+      p.state = p.state || hit.state;
+      if (p.state === 'GROWING' && hit.produce && p.lastUpdated) {
+        const prod = dec.produce[hit.produce];
+        if (prod) {
+          // ticks remaining to leave the GROWING range → first HARVESTABLE varbit
+          const ticksRemaining = Math.max(0, hit.hi + 1 - p.varbitValue);
+          const minutes = ticksRemaining * prod.tickrate * FARMING_TICK_MINUTES;
+          p.cycleStartedAt = p.cycleStartedAt || p.lastUpdated;
+          p.readyAt = p.readyAt || new Date(Date.parse(p.lastUpdated) + minutes * 60_000).toISOString();
+        }
+      } else if (p.state === 'HARVESTABLE') {
+        p.readyAt = p.readyAt || p.lastUpdated;
+      }
     }
-    const acc = accs.find(a => a.hash === STATE.account);
-    return acc ? (acc.patches || []).map(p => ({ ...p, _acc: acc })) : [];
+    return p;
   }
 
   function renderBoard(patches) {
