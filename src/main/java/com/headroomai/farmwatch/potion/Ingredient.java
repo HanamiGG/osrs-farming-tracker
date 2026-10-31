@@ -9,54 +9,78 @@ package com.headroomai.farmwatch.potion;
  * {@link #source} is a one-liner shown next to each secondary; the real
  * guide is still the wiki, but this is enough to point users at the
  * right content without them having to tab out mid-plan.
+ *
+ * <p>{@link #itemId} is the brewable-form OSRS item id used by the bank
+ * reader. Grimy herbs are intentionally NOT counted — the planner's
+ * "need N torstol" means N doses of brewable torstol, and if the user
+ * has 300 grimy they still need to clean them before they count. Keeps
+ * the semantic clean rather than silently inflating counts.
  */
 public enum Ingredient
 {
-    // Herbs (cleaned). Display names match the in-game item names.
-    GUAM(Type.HERB, "Guam leaf", null),
-    MARRENTILL(Type.HERB, "Marrentill", null),
-    TARROMIN(Type.HERB, "Tarromin", null),
-    HARRALANDER(Type.HERB, "Harralander", null),
-    RANARR(Type.HERB, "Ranarr weed", null),
-    TOADFLAX(Type.HERB, "Toadflax", null),
-    IRIT(Type.HERB, "Irit leaf", null),
-    AVANTOE(Type.HERB, "Avantoe", null),
-    KWUARM(Type.HERB, "Kwuarm", null),
-    SNAPDRAGON(Type.HERB, "Snapdragon", null),
-    CADANTINE(Type.HERB, "Cadantine", null),
-    LANTADYME(Type.HERB, "Lantadyme", null),
-    DWARF_WEED(Type.HERB, "Dwarf weed", null),
-    TORSTOL(Type.HERB, "Torstol", null),
+    // ----- Herbs (clean form). ids are OSRS item ids (stable across versions). -----
+    GUAM(Type.HERB,       "Guam leaf",      null, 249),
+    MARRENTILL(Type.HERB, "Marrentill",     null, 251),
+    TARROMIN(Type.HERB,   "Tarromin",       null, 253),
+    HARRALANDER(Type.HERB,"Harralander",    null, 255),
+    RANARR(Type.HERB,     "Ranarr weed",    null, 257),
+    TOADFLAX(Type.HERB,   "Toadflax",       null, 2998),
+    IRIT(Type.HERB,       "Irit leaf",      null, 259),
+    AVANTOE(Type.HERB,    "Avantoe",        null, 261),
+    KWUARM(Type.HERB,     "Kwuarm",         null, 263),
+    SNAPDRAGON(Type.HERB, "Snapdragon",     null, 3000),
+    CADANTINE(Type.HERB,  "Cadantine",      null, 265),
+    LANTADYME(Type.HERB,  "Lantadyme",      null, 2481),
+    DWARF_WEED(Type.HERB, "Dwarf weed",     null, 267),
+    TORSTOL(Type.HERB,    "Torstol",        null, 269),
 
-    // Secondaries.
-    EYE_OF_NEWT(Type.SECONDARY, "Eye of newt", "General store (Betty, Port Sarim)"),
-    LIMPWURT_ROOT(Type.SECONDARY, "Limpwurt root", "Hobgoblins / plant limpwurt seeds in flower patch"),
-    WHITE_BERRIES(Type.SECONDARY, "White berries", "White berry bush (Farming 59) / fairy ring BKR"),
-    SNAPE_GRASS(Type.SECONDARY, "Snape grass", "Spawns at Waterbirth / Jiggig; plant post-Garden of Tranquility"),
-    MORT_MYRE_FUNGUS(Type.SECONDARY, "Mort myre fungus", "Mort Myre swamp with silver sickle"),
-    AMYLASE_CRYSTAL(Type.SECONDARY, "Amylase crystal", "Barbarian Assault (10 pts/crystal) or Mastering Mixology"),
-    RED_SPIDERS_EGGS(Type.SECONDARY, "Red spiders' eggs", "Edgeville / Taverley dungeon spawns"),
-    CRUSHED_NEST(Type.SECONDARY, "Crushed bird's nest", "Bird's nests from woodcutting + pestle and mortar"),
-    PHOENIX_FEATHER(Type.SECONDARY, "Phoenix feather", "Phoenix slayer drop / Mount Quidamortem"),
-    LAVA_SCALE_SHARD(Type.SECONDARY, "Lava scale shard", "Konar / Vorkath drop; crush lava scale with pestle"),
-    DRAGON_SCALE_DUST(Type.SECONDARY, "Dragon scale dust", "Blue dragons; crush blue dragon scale with pestle"),
-    WINE_OF_ZAMORAK(Type.SECONDARY, "Wine of Zamorak", "Chaos Temple (Asgarnia) altar spawn — telegrab"),
-    POTATO_CACTUS(Type.SECONDARY, "Potato cactus", "Cactus patch (Farming 25) / Kalphite Lair spawns"),
-    JANGERBERRIES(Type.SECONDARY, "Jangerberries", "Jangerberry bush (Farming 48) / Legends' Guild garden"),
-    MAGIC_ROOT(Type.SECONDARY, "Magic root", "Dig up magic tree stump after chopping (Farming 75)"),
-    ZULRAH_SCALES(Type.SECONDARY, "Zulrah's scales", "Zulrah drop (requires Regicide)");
+    // ----- Secondaries. -----
+    EYE_OF_NEWT(Type.SECONDARY, "Eye of newt",
+        "General store (Betty, Port Sarim)", 221),
+    LIMPWURT_ROOT(Type.SECONDARY, "Limpwurt root",
+        "Hobgoblins / plant limpwurt seeds in flower patch", 225),
+    WHITE_BERRIES(Type.SECONDARY, "White berries",
+        "White berry bush (Farming 59) / fairy ring BKR", 239),
+    SNAPE_GRASS(Type.SECONDARY, "Snape grass",
+        "Spawns at Waterbirth / Jiggig; plant post-Garden of Tranquility", 231),
+    MORT_MYRE_FUNGUS(Type.SECONDARY, "Mort myre fungus",
+        "Mort Myre swamp with silver sickle", 2970),
+    AMYLASE_CRYSTAL(Type.SECONDARY, "Amylase crystal",
+        "Barbarian Assault (10 pts/crystal) or Mastering Mixology", 12640),
+    RED_SPIDERS_EGGS(Type.SECONDARY, "Red spiders' eggs",
+        "Edgeville / Taverley dungeon spawns", 223),
+    CRUSHED_NEST(Type.SECONDARY, "Crushed bird's nest",
+        "Bird's nests from woodcutting + pestle and mortar", 6693),
+    PHOENIX_FEATHER(Type.SECONDARY, "Phoenix feather",
+        "Phoenix slayer drop / Mount Quidamortem", 24268),
+    LAVA_SCALE_SHARD(Type.SECONDARY, "Lava scale shard",
+        "Konar / Vorkath drop; crush lava scale with pestle", 21623),
+    DRAGON_SCALE_DUST(Type.SECONDARY, "Dragon scale dust",
+        "Blue dragons; crush blue dragon scale with pestle", 241),
+    WINE_OF_ZAMORAK(Type.SECONDARY, "Wine of Zamorak",
+        "Chaos Temple (Asgarnia) altar spawn — telegrab", 245),
+    POTATO_CACTUS(Type.SECONDARY, "Potato cactus",
+        "Cactus patch (Farming 25) / Kalphite Lair spawns", 3138),
+    JANGERBERRIES(Type.SECONDARY, "Jangerberries",
+        "Jangerberry bush (Farming 48) / Legends' Guild garden", 247),
+    MAGIC_ROOT(Type.SECONDARY, "Magic root",
+        "Dig up magic tree stump after chopping (Farming 75)", 6043),
+    ZULRAH_SCALES(Type.SECONDARY, "Zulrah's scales",
+        "Zulrah drop (requires Regicide)", 12934);
 
     public enum Type { HERB, SECONDARY }
 
     private final Type type;
     private final String displayName;
     private final String source;
+    private final int itemId;
 
-    Ingredient(Type type, String displayName, String source)
+    Ingredient(Type type, String displayName, String source, int itemId)
     {
         this.type = type;
         this.displayName = displayName;
         this.source = source;
+        this.itemId = itemId;
     }
 
     public Type type() { return type; }
@@ -64,4 +88,7 @@ public enum Ingredient
 
     /** One-line note on where ironmen get this. {@code null} for herbs (the dashboard already covers those). */
     public String source() { return source; }
+
+    /** OSRS item id of the brewable form (grimy herbs are not matched). */
+    public int itemId() { return itemId; }
 }

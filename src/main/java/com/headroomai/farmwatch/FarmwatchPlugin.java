@@ -2,6 +2,7 @@ package com.headroomai.farmwatch;
 
 import com.google.inject.Provides;
 import com.headroomai.farmwatch.model.AccountState;
+import com.headroomai.farmwatch.potion.BankTracker;
 import com.headroomai.farmwatch.ui.PotionPlannerPanel;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -15,6 +16,7 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
@@ -35,12 +37,14 @@ public class FarmwatchPlugin extends Plugin
     @Inject private ConfigManager configManager;
     @Inject private FarmwatchConfig config;
     @Inject private ClientToolbar clientToolbar;
+    @Inject private EventBus eventBus;
 
     private FarmwatchState state;
     private PatchReader patchReader;
     private StateExporter exporter;
     private LocalServer server;
     private NavigationButton potionNav;
+    private BankTracker bankTracker;
 
     private boolean dirty = false;
 
@@ -75,12 +79,14 @@ public class FarmwatchPlugin extends Plugin
 
         if (config.showPotionPanel())
         {
+            bankTracker = new BankTracker();
+            eventBus.register(bankTracker);
             BufferedImage icon = ImageUtil.loadImageResource(FarmwatchPlugin.class, "/com/headroomai/farmwatch/panel-icon.png");
             potionNav = NavigationButton.builder()
                 .tooltip("Potion Planner")
                 .icon(icon)
                 .priority(5)
-                .panel(new PotionPlannerPanel())
+                .panel(new PotionPlannerPanel(bankTracker))
                 .build();
             clientToolbar.addNavigation(potionNav);
         }
@@ -93,6 +99,11 @@ public class FarmwatchPlugin extends Plugin
         {
             clientToolbar.removeNavigation(potionNav);
             potionNav = null;
+        }
+        if (bankTracker != null)
+        {
+            eventBus.unregister(bankTracker);
+            bankTracker = null;
         }
         if (server != null)
         {

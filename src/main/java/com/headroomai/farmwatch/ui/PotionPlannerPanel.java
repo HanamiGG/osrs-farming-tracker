@@ -1,5 +1,6 @@
 package com.headroomai.farmwatch.ui;
 
+import com.headroomai.farmwatch.potion.BankTracker;
 import com.headroomai.farmwatch.potion.Ingredient;
 import com.headroomai.farmwatch.potion.PotionCatalog;
 import com.headroomai.farmwatch.potion.PotionDef;
@@ -34,15 +35,17 @@ public class PotionPlannerPanel extends PluginPanel
 {
     private static final String FILTER_ALL = "All";
 
+    private final BankTracker bankTracker;
     private final Map<PotionDef, JSpinner> inputs = new HashMap<>();
     private final Map<PotionDef, JPanel> inputRows = new HashMap<>();
     private final JPanel outputPanel = new JPanel();
     private final JLabel emptyHint = new JLabel("Set quantities above and press Compute.");
     private final JComboBox<String> categoryFilter = new JComboBox<>();
 
-    public PotionPlannerPanel()
+    public PotionPlannerPanel(BankTracker bankTracker)
     {
         super();
+        this.bankTracker = bankTracker;
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -229,6 +232,11 @@ public class PotionPlannerPanel extends PluginPanel
         }
         else
         {
+            if (bankTracker != null && !bankTracker.hasSeenBank())
+            {
+                outputPanel.add(bankBanner());
+                outputPanel.add(Box.createVerticalStrut(6));
+            }
             if (!out.herbs().isEmpty())
             {
                 outputPanel.add(sectionHeader("Herbs"));
@@ -251,6 +259,16 @@ public class PotionPlannerPanel extends PluginPanel
         outputPanel.repaint();
     }
 
+    private JLabel bankBanner()
+    {
+        JLabel banner = new JLabel("<html>Open your bank to see what you already have.</html>");
+        banner.setFont(FontManager.getRunescapeSmallFont());
+        banner.setForeground(ColorScheme.PROGRESS_INPROGRESS_COLOR);
+        banner.setBorder(BorderFactory.createEmptyBorder(2, 0, 4, 0));
+        banner.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return banner;
+    }
+
     private JLabel sectionHeader(String text)
     {
         JLabel header = new JLabel(text);
@@ -269,11 +287,35 @@ public class PotionPlannerPanel extends PluginPanel
         row.setBorder(BorderFactory.createEmptyBorder(0, 0, 2, 0));
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
 
+        boolean bankReady = bankTracker != null && bankTracker.hasSeenBank();
+        int have = bankReady ? bankTracker.getCount(ing.itemId()) : 0;
+        int deficit = Math.max(0, qty - have);
+
         JLabel main = new JLabel(qty + " × " + ing.displayName());
         main.setFont(FontManager.getRunescapeSmallFont());
-        main.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+        if (bankReady)
+        {
+            main.setForeground(deficit > 0
+                ? ColorScheme.PROGRESS_ERROR_COLOR
+                : ColorScheme.PROGRESS_COMPLETE_COLOR);
+        }
+        else
+        {
+            main.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+        }
         main.setHorizontalAlignment(SwingConstants.LEFT);
         row.add(main);
+
+        if (bankReady)
+        {
+            String sub = deficit > 0
+                ? ("have " + have + " · short " + deficit)
+                : ("have " + have + " ✓");
+            JLabel haveLine = new JLabel("<html><span style='color:#888'>&nbsp;&nbsp;" + sub + "</span></html>");
+            haveLine.setFont(FontManager.getRunescapeSmallFont());
+            haveLine.setHorizontalAlignment(SwingConstants.LEFT);
+            row.add(haveLine);
+        }
 
         if (ing.source() != null)
         {

@@ -17,7 +17,9 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok:1.18.34'
 
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.mockito:mockito-core:4.11.0'
+    // mockito-inline enables mocking final classes, which RuneLite API uses
+    // for Item, ItemContainerChanged, etc. Pulls in mockito-core transitively.
+    testImplementation 'org.mockito:mockito-inline:4.11.0'
     testImplementation group: 'net.runelite', name: 'client', version: runeLiteVersion
     testImplementation group: 'net.runelite', name: 'jshell', version: runeLiteVersion
 }
@@ -32,6 +34,7 @@ java {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    options.compilerArgs += ['-Xlint:deprecation']
 }
 
 // Write the Gradle project version into a classpath resource so the plugin
