@@ -49,4 +49,12 @@ public interface FarmwatchConfig extends Config
         position = 5
     )
     default String exportDir() { return ""; }
+
+    @ConfigItem(
+        keyName = "showPotionPanel",
+        name = "Show potion planner",
+        description = "Adds a sidebar panel for planning ironman potion brews (set goals, see raw herb + secondary shopping list). Takes effect after plugin restart.",
+        position = 6
+    )
+    default boolean showPotionPanel() { return true; }
 }

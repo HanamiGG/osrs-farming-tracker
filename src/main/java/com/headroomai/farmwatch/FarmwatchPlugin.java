@@ -2,6 +2,8 @@ package com.headroomai.farmwatch;
 
 import com.google.inject.Provides;
 import com.headroomai.farmwatch.model.AccountState;
+import com.headroomai.farmwatch.ui.PotionPlannerPanel;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -17,6 +19,9 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.util.ImageUtil;
 
 @Slf4j
 @PluginDescriptor(
@@ -29,11 +34,13 @@ public class FarmwatchPlugin extends Plugin
     @Inject private Client client;
     @Inject private ConfigManager configManager;
     @Inject private FarmwatchConfig config;
+    @Inject private ClientToolbar clientToolbar;
 
     private FarmwatchState state;
     private PatchReader patchReader;
     private StateExporter exporter;
     private LocalServer server;
+    private NavigationButton potionNav;
 
     private boolean dirty = false;
 
@@ -65,11 +72,28 @@ public class FarmwatchPlugin extends Plugin
                 server = null;
             }
         }
+
+        if (config.showPotionPanel())
+        {
+            BufferedImage icon = ImageUtil.loadImageResource(FarmwatchPlugin.class, "/com/headroomai/farmwatch/panel-icon.png");
+            potionNav = NavigationButton.builder()
+                .tooltip("Potion Planner")
+                .icon(icon)
+                .priority(5)
+                .panel(new PotionPlannerPanel())
+                .build();
+            clientToolbar.addNavigation(potionNav);
+        }
     }
 
     @Override
     protected void shutDown() throws Exception
     {
+        if (potionNav != null)
+        {
+            clientToolbar.removeNavigation(potionNav);
+            potionNav = null;
+        }
         if (server != null)
         {
             server.stop();
