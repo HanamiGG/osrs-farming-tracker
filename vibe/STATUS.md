@@ -28,9 +28,10 @@ protection ✓, multi-account switcher, three views (status / timeline /
 run planner), and a ready/soon/diseased/dead summary strip above the
 views.
 
-**HTTP server is OFF by default now** so Plugin Hub review has less to
-object to. Users enable it in the config panel; file snapshots work
-either way.
+**HTTP server is ON by default** so the dashboard works out of the box.
+Reverted the brief "off by default" stance because first-run friction
+hurt more than it helped the Plugin Hub review case — the server is
+loopback-only with a CORS allowlist, which the submission note explains.
 
 **Plugin Hub submission ready to send.** `vibe/05_plugin_hub_submission.md`
 has the step-by-step. Repo is already restructured (plugin at root,

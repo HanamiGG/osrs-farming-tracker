@@ -22,7 +22,7 @@ dependencies {
 }
 
 group = 'com.headroomai.farmwatch'
-version = '0.1.0'
+version = '0.2.0'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -32,6 +32,30 @@ java {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
+
+// Write the Gradle project version into a classpath resource so the plugin
+// doesn't have to hardcode its own version string in Java. JsonCodec reads
+// this at runtime and ships it to the dashboard as `pluginVersion`.
+tasks.register('writeVersionResource') {
+    def outFile = layout.buildDirectory.file('generated-resources/farmwatch-version.properties')
+    outputs.file(outFile)
+    inputs.property('version', version)
+    doLast {
+        def f = outFile.get().asFile
+        f.parentFile.mkdirs()
+        f.text = "version=${version}\n"
+    }
+}
+
+sourceSets {
+    main {
+        resources {
+            srcDir layout.buildDirectory.dir('generated-resources')
+        }
+    }
+}
+
+processResources.dependsOn tasks.named('writeVersionResource')
 
 tasks.register('runClient', JavaExec) {
     group = 'runelite'

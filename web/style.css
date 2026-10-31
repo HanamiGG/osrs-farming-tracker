@@ -357,6 +357,12 @@ a:hover { color: var(--ink); }
 .kpi.kpi-growing  .kpi-value { color: var(--ok); }
 .kpi.kpi-dead     .kpi-value { color: var(--dead); }
 
+.onboard-panel { border-left: 4px solid var(--accent); }
+.onboard-actions {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin-top: 10px;
+}
+
 .list-upnext { list-style: none; padding: 0; margin: 0; }
 .list-upnext li {
   display: grid; grid-template-columns: 24px 1fr auto; gap: 10px; align-items: center;

@@ -202,6 +202,15 @@
     r.readAsText(f);
   }
 
+  function loadSampleData() {
+    return fetch('samples/sample-state.json').then(r => r.json()).then(j => {
+      STATE.data = j; rebuildVarbitInv();
+      safeSet(LS.snapshot, JSON.stringify(j));
+      setConnected(false, 'snapshot');
+      renderRoute();
+    });
+  }
+
   function setConnected(ok, mode) {
     STATE.offline = !ok;
     if (ok) setChip('Live', 'chip-ok');
@@ -341,9 +350,14 @@
     const favs = live.filter(p => STATE.favorites.has(`${p.regionId}.${p.varbitId}`));
 
     const connHint = (!STATE.data)
-      ? `<div class="panel span-12">
-          <h2 class="panel-head">Get started</h2>
-          <p class="subtle">No data from the plugin yet. Open the <a href="#/connection">Connection</a> page to point this dashboard at the Farmwatch plugin, drop a <code>state-*.json</code> snapshot, or load the sample.</p>
+      ? `<div class="panel span-12 onboard-panel">
+          <h2 class="panel-head">Welcome &mdash; no plugin data yet</h2>
+          <p class="subtle">Farmwatch mirrors your OSRS farming patches from the stock Time Tracking plugin so you can watch countdowns in your browser.</p>
+          <div class="onboard-actions">
+            <button class="btn" id="dash-load-sample">Try it with sample data</button>
+            <a class="btn btn-ghost" href="#/connection">Connect the plugin &rsaquo;</a>
+            <a class="btn btn-ghost" href="#/about">Setup guide &rsaquo;</a>
+          </div>
         </div>`
       : '';
 
@@ -427,6 +441,8 @@
         </div>
       </div>
     `;
+    const sampleBtn = root.querySelector('#dash-load-sample');
+    if (sampleBtn) sampleBtn.addEventListener('click', loadSampleData);
   }
 
   function renderRunSuggestion(patches) {
@@ -1004,14 +1020,7 @@
       renderRoute();
     });
 
-    document.getElementById('load-sample').addEventListener('click', () => {
-      fetch('samples/sample-state.json').then(r => r.json()).then(j => {
-        STATE.data = j; rebuildVarbitInv();
-        safeSet(LS.snapshot, JSON.stringify(j));
-        setConnected(false, 'snapshot');
-        renderRoute();
-      });
-    });
+    document.getElementById('load-sample').addEventListener('click', loadSampleData);
 
     const el = document.getElementById('conn-stat');
     if (STATE.offline && !STATE.data) el.innerHTML = '<span class="chip chip-bad">Offline</span>';

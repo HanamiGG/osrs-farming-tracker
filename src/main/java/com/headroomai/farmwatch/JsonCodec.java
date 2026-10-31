@@ -8,6 +8,7 @@ import com.google.gson.stream.JsonWriter;
 import com.headroomai.farmwatch.model.AccountState;
 import com.headroomai.farmwatch.model.PatchState;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
@@ -16,6 +17,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.TreeMap;
 
 /**
@@ -49,7 +51,7 @@ public final class JsonCodec
         Envelope env = new Envelope();
         env.version = FarmwatchState.SCHEMA_VERSION;
         env.generatedAt = state.generatedAt();
-        env.pluginVersion = "0.1.0";
+        env.pluginVersion = pluginVersion();
         env.varbitMap = loadFarmingVarbitMap();
         for (AccountState acc : state.all())
         {
@@ -63,10 +65,37 @@ public final class JsonCodec
         Envelope env = new Envelope();
         env.version = FarmwatchState.SCHEMA_VERSION;
         env.generatedAt = state.generatedAt();
-        env.pluginVersion = "0.1.0";
+        env.pluginVersion = pluginVersion();
         env.varbitMap = loadFarmingVarbitMap();
         env.accounts.add(toDto(acc));
         return GSON.toJson(env).getBytes(StandardCharsets.UTF_8);
+    }
+
+    private static volatile String pluginVersionCache;
+
+    /**
+     * Read the version written by the `writeVersionResource` Gradle task
+     * from a classpath properties file. Falls back to "dev" when the resource
+     * isn't present (e.g. running from an IDE that skipped processResources).
+     */
+    public static String pluginVersion()
+    {
+        String cached = pluginVersionCache;
+        if (cached != null) return cached;
+        String resolved = "dev";
+        try (InputStream in = JsonCodec.class.getResourceAsStream("/farmwatch-version.properties"))
+        {
+            if (in != null)
+            {
+                Properties props = new Properties();
+                props.load(in);
+                String v = props.getProperty("version");
+                if (v != null && !v.isEmpty()) resolved = v;
+            }
+        }
+        catch (IOException ignored) { }
+        pluginVersionCache = resolved;
+        return resolved;
     }
 
     /**
