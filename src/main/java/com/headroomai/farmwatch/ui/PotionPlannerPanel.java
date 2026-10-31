@@ -1,6 +1,11 @@
 package com.headroomai.farmwatch.ui;
 
+import com.headroomai.farmwatch.FarmwatchConfig;
+import com.headroomai.farmwatch.FarmwatchState;
 import com.headroomai.farmwatch.potion.BankTracker;
+import com.headroomai.farmwatch.potion.GrowingHerbs;
+import com.headroomai.farmwatch.potion.HerbVarbitDecoder;
+import com.headroomai.farmwatch.potion.HerbYield;
 import com.headroomai.farmwatch.potion.Ingredient;
 import com.headroomai.farmwatch.potion.PotionCatalog;
 import com.headroomai.farmwatch.potion.PotionDef;
@@ -9,6 +14,9 @@ import com.headroomai.farmwatch.potion.ShoppingList;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import javax.swing.BorderFactory;
@@ -21,31 +29,53 @@ import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
+import net.runelite.api.Client;
+import net.runelite.api.Skill;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
 
 /**
- * Sidebar panel: user enters how many of each potion they want to brew,
- * clicks Compute, sees the raw herb + secondary shopping list. No bank
- * reading — users mentally subtract what they already have. See
- * {@link PotionPlanner} for the math; the panel is a thin shell.
+ * Sidebar panel: the user sets how many of each potion they want to
+ * brew, we show the raw herb + secondary shopping list cross-referenced
+ * against their bank snapshot and currently-growing herb patches.
+ *
+ * <p>Rows live in three states depending on what we know:
+ * <ul>
+ *   <li>No bank yet → amber banner, grey list, no have/short math.</li>
+ *   <li>Bank seen, deficit → red main label + "have N · short M".</li>
+ *   <li>Bank seen, sufficient → green main label + "have N ✓".</li>
+ * </ul>
+ * For herbs we also show "+Y growing (ready ~HH:MM)" when the farming
+ * state has growing patches of that herb; the yield comes from
+ * {@link HerbYield} using the player's Farming level.
  */
 public class PotionPlannerPanel extends PluginPanel
 {
     private static final String FILTER_ALL = "All";
+    private static final DateTimeFormatter TIME_FMT =
+        DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault());
 
     private final BankTracker bankTracker;
+    private final FarmwatchState farmState;
+    private final Client client;
+    private final FarmwatchConfig config;
     private final Map<PotionDef, JSpinner> inputs = new HashMap<>();
     private final Map<PotionDef, JPanel> inputRows = new HashMap<>();
     private final JPanel outputPanel = new JPanel();
     private final JLabel emptyHint = new JLabel("Set quantities above and press Compute.");
     private final JComboBox<String> categoryFilter = new JComboBox<>();
 
-    public PotionPlannerPanel(BankTracker bankTracker)
+    public PotionPlannerPanel(BankTracker bankTracker,
+                              FarmwatchState farmState,
+                              Client client,
+                              FarmwatchConfig config)
     {
         super();
         this.bankTracker = bankTracker;
+        this.farmState = farmState;
+        this.client = client;
+        this.config = config;
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -65,7 +95,7 @@ public class PotionPlannerPanel extends PluginPanel
         title.setForeground(ColorScheme.BRAND_ORANGE);
         header.add(title, BorderLayout.NORTH);
 
-        JLabel sub = new JLabel("<html>Enter how many of each potion you want to brew. The list below is raw ingredient totals &mdash; subtract what you already have.</html>");
+        JLabel sub = new JLabel("<html>Enter how many of each potion you want to brew. Open your bank and visit your herb patches so the planner can show what you have, what's growing, and what's short.</html>");
         sub.setFont(FontManager.getRunescapeSmallFont());
         sub.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
         sub.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
@@ -237,12 +267,13 @@ public class PotionPlannerPanel extends PluginPanel
                 outputPanel.add(bankBanner());
                 outputPanel.add(Box.createVerticalStrut(6));
             }
+            Map<HerbVarbitDecoder.Produce, GrowingHerbs.Aggregate> growing = currentGrowingHerbs();
             if (!out.herbs().isEmpty())
             {
                 outputPanel.add(sectionHeader("Herbs"));
                 for (Map.Entry<Ingredient, Integer> row : out.herbs().entrySet())
                 {
-                    outputPanel.add(ingredientLine(row.getKey(), row.getValue()));
+                    outputPanel.add(ingredientLine(row.getKey(), row.getValue(), growing));
                 }
             }
             if (!out.secondaries().isEmpty())
@@ -251,12 +282,44 @@ public class PotionPlannerPanel extends PluginPanel
                 outputPanel.add(sectionHeader("Secondaries"));
                 for (Map.Entry<Ingredient, Integer> row : out.secondaries().entrySet())
                 {
-                    outputPanel.add(ingredientLine(row.getKey(), row.getValue()));
+                    outputPanel.add(ingredientLine(row.getKey(), row.getValue(), growing));
                 }
             }
         }
         outputPanel.revalidate();
         outputPanel.repaint();
+    }
+
+    private Map<HerbVarbitDecoder.Produce, GrowingHerbs.Aggregate> currentGrowingHerbs()
+    {
+        if (client == null || farmState == null)
+        {
+            return java.util.Collections.emptyMap();
+        }
+        long hash;
+        try
+        {
+            hash = client.getAccountHash();
+        }
+        catch (Throwable t)
+        {
+            return java.util.Collections.emptyMap();
+        }
+        return GrowingHerbs.aggregate(farmState, hash);
+    }
+
+    private int farmingLevel()
+    {
+        if (client == null) return 1;
+        try
+        {
+            int lv = client.getRealSkillLevel(Skill.FARMING);
+            return lv > 0 ? lv : 1;
+        }
+        catch (Throwable t)
+        {
+            return 1;
+        }
     }
 
     private JLabel bankBanner()
@@ -279,7 +342,7 @@ public class PotionPlannerPanel extends PluginPanel
         return header;
     }
 
-    private JPanel ingredientLine(Ingredient ing, int qty)
+    private JPanel ingredientLine(Ingredient ing, int qty, Map<HerbVarbitDecoder.Produce, GrowingHerbs.Aggregate> growing)
     {
         JPanel row = new JPanel();
         row.setLayout(new BoxLayout(row, BoxLayout.Y_AXIS));
@@ -311,20 +374,66 @@ public class PotionPlannerPanel extends PluginPanel
             String sub = deficit > 0
                 ? ("have " + have + " · short " + deficit)
                 : ("have " + have + " ✓");
-            JLabel haveLine = new JLabel("<html><span style='color:#888'>&nbsp;&nbsp;" + sub + "</span></html>");
-            haveLine.setFont(FontManager.getRunescapeSmallFont());
-            haveLine.setHorizontalAlignment(SwingConstants.LEFT);
-            row.add(haveLine);
+            row.add(subLineLabel(sub));
+        }
+
+        // Growing-patch line: only for herbs with yield model, and only when we actually see patches.
+        String growingLine = growingSubline(ing, growing);
+        if (growingLine != null)
+        {
+            row.add(subLineLabel(growingLine));
         }
 
         if (ing.source() != null)
         {
-            JLabel source = new JLabel("<html><span style='color:#888'>&nbsp;&nbsp;" + ing.source() + "</span></html>");
-            source.setFont(FontManager.getRunescapeSmallFont());
-            source.setHorizontalAlignment(SwingConstants.LEFT);
-            row.add(source);
+            row.add(subLineLabel(ing.source()));
         }
         return row;
+    }
+
+    private String growingSubline(Ingredient ing, Map<HerbVarbitDecoder.Produce, GrowingHerbs.Aggregate> growing)
+    {
+        if (!ing.hasYieldModel()) return null;
+        HerbVarbitDecoder.Produce p = HerbVarbitDecoder.produceFor(ing);
+        if (p == null) return null;
+        GrowingHerbs.Aggregate agg = growing.get(p);
+        if (agg == null || agg.yieldingPatches() == 0) return null;
+
+        boolean assumeSecateurs = config != null && config.assumeMagicSecateurs();
+        int expected = HerbYield.expectedFromPatches(ing, agg.yieldingPatches(), farmingLevel(), assumeSecateurs);
+        if (expected <= 0) return null;
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("+").append(expected).append(" from ").append(agg.yieldingPatches()).append(" patch");
+        if (agg.yieldingPatches() != 1) sb.append("es");
+        if (agg.harvestablePatches > 0 && agg.growingPatches == 0)
+        {
+            sb.append(" (ready now)");
+        }
+        else if (agg.earliestReadyAt != null)
+        {
+            if (agg.earliestReadyAt.isBefore(Instant.now()))
+            {
+                sb.append(" (ready now)");
+            }
+            else
+            {
+                sb.append(" (ready ~").append(TIME_FMT.format(agg.earliestReadyAt)).append(")");
+            }
+        }
+        if (agg.diseasedPatches > 0)
+        {
+            sb.append(" · ").append(agg.diseasedPatches).append(" diseased");
+        }
+        return sb.toString();
+    }
+
+    private JLabel subLineLabel(String text)
+    {
+        JLabel label = new JLabel("<html><span style='color:#888'>&nbsp;&nbsp;" + text + "</span></html>");
+        label.setFont(FontManager.getRunescapeSmallFont());
+        label.setHorizontalAlignment(SwingConstants.LEFT);
+        return label;
     }
 
     private static String prettyName(PotionDef.Category c)

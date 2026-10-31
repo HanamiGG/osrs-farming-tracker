@@ -86,7 +86,7 @@ public class FarmwatchPlugin extends Plugin
                 .tooltip("Potion Planner")
                 .icon(icon)
                 .priority(5)
-                .panel(new PotionPlannerPanel(bankTracker))
+                .panel(new PotionPlannerPanel(bankTracker, state, client, config))
                 .build();
             clientToolbar.addNavigation(potionNav);
         }

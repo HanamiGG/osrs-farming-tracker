@@ -57,4 +57,12 @@ public interface FarmwatchConfig extends Config
         position = 6
     )
     default boolean showPotionPanel() { return true; }
+
+    @ConfigItem(
+        keyName = "assumeMagicSecateurs",
+        name = "Assume magic secateurs",
+        description = "When computing expected herbs from your growing patches, assume you'll be wearing magic secateurs at harvest (+10% yield). Leave on unless you really don't use them.",
+        position = 7
+    )
+    default boolean assumeMagicSecateurs() { return true; }
 }
