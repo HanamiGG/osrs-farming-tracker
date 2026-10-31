@@ -15,24 +15,30 @@ package com.headroomai.farmwatch.potion;
  * "need N torstol" means N doses of brewable torstol, and if the user
  * has 300 grimy they still need to clean them before they count. Keeps
  * the semantic clean rather than silently inflating counts.
+ *
+ * <p>{@link #ctsLow} / {@link #ctsHigh} are the "chance to save a life"
+ * low/high pair used by {@link HerbYield} to compute expected herbs per
+ * patch at the player's current Farming level. Only populated for herbs
+ * (secondaries don't have a patch yield model). Values come from the
+ * OSRS Wiki "Chance to save a life" table; adjust here if Jagex rebalances.
  */
 public enum Ingredient
 {
     // ----- Herbs (clean form). ids are OSRS item ids (stable across versions). -----
-    GUAM(Type.HERB,       "Guam leaf",      null, 249),
-    MARRENTILL(Type.HERB, "Marrentill",     null, 251),
-    TARROMIN(Type.HERB,   "Tarromin",       null, 253),
-    HARRALANDER(Type.HERB,"Harralander",    null, 255),
-    RANARR(Type.HERB,     "Ranarr weed",    null, 257),
-    TOADFLAX(Type.HERB,   "Toadflax",       null, 2998),
-    IRIT(Type.HERB,       "Irit leaf",      null, 259),
-    AVANTOE(Type.HERB,    "Avantoe",        null, 261),
-    KWUARM(Type.HERB,     "Kwuarm",         null, 263),
-    SNAPDRAGON(Type.HERB, "Snapdragon",     null, 3000),
-    CADANTINE(Type.HERB,  "Cadantine",      null, 265),
-    LANTADYME(Type.HERB,  "Lantadyme",      null, 2481),
-    DWARF_WEED(Type.HERB, "Dwarf weed",     null, 267),
-    TORSTOL(Type.HERB,    "Torstol",        null, 269),
+    GUAM(Type.HERB,       "Guam leaf",      null, 249,  25, 80),
+    MARRENTILL(Type.HERB, "Marrentill",     null, 251,  28, 80),
+    TARROMIN(Type.HERB,   "Tarromin",       null, 253,  31, 80),
+    HARRALANDER(Type.HERB,"Harralander",    null, 255,  36, 80),
+    RANARR(Type.HERB,     "Ranarr weed",    null, 257,  39, 80),
+    TOADFLAX(Type.HERB,   "Toadflax",       null, 2998, 43, 80),
+    IRIT(Type.HERB,       "Irit leaf",      null, 259,  46, 80),
+    AVANTOE(Type.HERB,    "Avantoe",        null, 261,  50, 80),
+    KWUARM(Type.HERB,     "Kwuarm",         null, 263,  54, 80),
+    SNAPDRAGON(Type.HERB, "Snapdragon",     null, 3000, 57, 80),
+    CADANTINE(Type.HERB,  "Cadantine",      null, 265,  60, 80),
+    LANTADYME(Type.HERB,  "Lantadyme",      null, 2481, 64, 80),
+    DWARF_WEED(Type.HERB, "Dwarf weed",     null, 267,  68, 80),
+    TORSTOL(Type.HERB,    "Torstol",        null, 269,  72, 80),
 
     // ----- Secondaries. -----
     EYE_OF_NEWT(Type.SECONDARY, "Eye of newt",
@@ -74,13 +80,27 @@ public enum Ingredient
     private final String displayName;
     private final String source;
     private final int itemId;
+    private final Integer ctsLow;
+    private final Integer ctsHigh;
 
     Ingredient(Type type, String displayName, String source, int itemId)
+    {
+        this(type, displayName, source, itemId, null, null);
+    }
+
+    Ingredient(Type type, String displayName, String source, int itemId, int ctsLow, int ctsHigh)
+    {
+        this(type, displayName, source, itemId, (Integer) ctsLow, (Integer) ctsHigh);
+    }
+
+    Ingredient(Type type, String displayName, String source, int itemId, Integer ctsLow, Integer ctsHigh)
     {
         this.type = type;
         this.displayName = displayName;
         this.source = source;
         this.itemId = itemId;
+        this.ctsLow = ctsLow;
+        this.ctsHigh = ctsHigh;
     }
 
     public Type type() { return type; }
@@ -91,4 +111,13 @@ public enum Ingredient
 
     /** OSRS item id of the brewable form (grimy herbs are not matched). */
     public int itemId() { return itemId; }
+
+    /** CTS low value from the OSRS "chance to save a life" table. Null for secondaries. */
+    public Integer ctsLow() { return ctsLow; }
+
+    /** CTS high value from the OSRS "chance to save a life" table. Null for secondaries. */
+    public Integer ctsHigh() { return ctsHigh; }
+
+    /** True iff this ingredient has a herb-patch yield model (herbs do, secondaries don't). */
+    public boolean hasYieldModel() { return ctsLow != null && ctsHigh != null; }
 }
