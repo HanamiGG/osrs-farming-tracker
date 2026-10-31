@@ -88,6 +88,9 @@
       applyTheme(next); safeSet(LS.theme, next);
     });
 
+    document.getElementById('refresh-btn').addEventListener('click', () => tryFetch({ manual: true }));
+    document.getElementById('shortcuts-btn').addEventListener('click', () => openDialog('shortcuts-dlg'));
+
     const search = document.getElementById('search-input');
     search.value = STATE.search;
     search.addEventListener('input', () => {
@@ -101,11 +104,28 @@
     });
 
     document.addEventListener('keydown', e => {
+      // Allow Escape to close dialogs/clear search even from inputs.
+      if (e.key === 'Escape') {
+        document.querySelectorAll('dialog[open]').forEach(d => d.close());
+        if (document.activeElement === search && search.value) {
+          search.value = ''; STATE.search = ''; renderRoute(); e.preventDefault();
+        }
+        return;
+      }
       if (e.target.matches('input,select,textarea')) return;
       if (e.key === '/') { e.preventDefault(); search.focus(); return; }
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) { openDialog('shortcuts-dlg'); return; }
+      if (e.key === 'r' || e.key === 'R') { tryFetch({ manual: true }); return; }
       const map = { '1':'dashboard','2':'patches','3':'timeline','4':'planner','5':'stats','6':'reference','7':'connection','8':'settings','9':'about' };
       if (map[e.key]) { location.hash = '#/' + map[e.key]; }
     });
+  }
+
+  function openDialog(id) {
+    const d = document.getElementById(id);
+    if (!d) return;
+    if (typeof d.showModal === 'function') d.showModal();
+    else d.setAttribute('open', '');
   }
 
   function bindRouter() {
@@ -128,7 +148,18 @@
     document.title = PAGES[STATE.route].label + ' · Farmwatch';
     const main = document.getElementById('main');
     main.innerHTML = '';
-    PAGES[STATE.route].render(main);
+    try {
+      PAGES[STATE.route].render(main);
+    } catch (err) {
+      console.error('[farmwatch] render crash on', STATE.route, err);
+      main.innerHTML = `
+        <div class="page-head"><div><h1>Something broke on this page</h1></div></div>
+        <div class="diag diag-bad">
+          <strong>${esc(STATE.route)} crashed while rendering.</strong>
+          <p>This is probably a Farmwatch bug — the dashboard will keep working on other pages. Try reloading, or <a href="https://github.com/HanamiGG/osrs-farming-tracker/issues/new?title=Render%20crash:%20${encodeURIComponent(STATE.route)}&body=${encodeURIComponent('Error: ' + (err && err.message || err))}" target="_blank" rel="noopener">file an issue</a> with the error below.</p>
+          <pre><code>${esc(String(err && err.stack || err))}</code></pre>
+        </div>`;
+    }
     document.getElementById('sidebar').classList.remove('open');
     main.scrollTop = 0;
     populateAccountSelect();
@@ -361,8 +392,27 @@
       }
     } else if (p.state === 'HARVESTABLE') {
       p.readyAt = p.readyAt || p.lastUpdated;
+    } else if (p.state === 'DISEASED' && p.lastUpdated) {
+      // Diseased crops die on the next farming tick for their patch type.
+      // The implementation's tickrate is shared across its produce; pick any
+      // produce in the implementation that has one.
+      const rate = tickrateFor(patchMeta.implementation, dec);
+      if (rate > 0) {
+        const observedUnix = Math.floor(Date.parse(p.lastUpdated) / 1000);
+        const tickTime = alignToFarmTick(observedUnix, rate, p._acc);
+        p.dieAt = p.dieAt || new Date((tickTime + rate * 60) * 1000).toISOString();
+      }
     }
     return p;
+  }
+
+  function tickrateFor(implementation, dec) {
+    const ranges = (dec.implementations && dec.implementations[implementation]) || [];
+    for (const r of ranges) {
+      const prod = r.produce && dec.produce && dec.produce[r.produce];
+      if (prod && prod.tickrate > 0) return prod.tickrate;
+    }
+    return 0;
   }
 
   function alignToFarmTick(requestedUnix, tickRateMin, acc) {
@@ -662,8 +712,52 @@
         if (STATE.favorites.has(key)) STATE.favorites.delete(key); else STATE.favorites.add(key);
         safeSet(LS.favorites, JSON.stringify([...STATE.favorites]));
         b.classList.toggle('on');
+        b.setAttribute('aria-pressed', String(b.classList.contains('on')));
+        b.setAttribute('aria-label', (b.classList.contains('on') ? 'Unfavorite ' : 'Favorite ') + (b.dataset.name || 'this patch'));
       });
     });
+    host.querySelectorAll('.card').forEach(c => {
+      c.addEventListener('click', e => {
+        if (e.target.closest('.fav')) return;
+        const key = c.dataset.key;
+        if (!key) return;
+        const patch = allPatchesFromCatalog().find(p => `${p.regionId}.${p.varbitId}` === key);
+        if (patch) openPatchDetail(patch);
+      });
+    });
+  }
+
+  function openPatchDetail(p) {
+    const dlg = document.getElementById('patch-detail');
+    const title = document.getElementById('pd-title');
+    const body = document.getElementById('pd-body');
+    const name = p.produce ? prettyProduce(p.produce) : (p.state === 'UNTRACKED' ? prettyImp(p.implementation || '?') : 'Patch');
+    title.textContent = `${name} — ${prettyRegion(p.region || '')}`;
+    const now = Date.now();
+    const readyMs = p.readyAt ? Date.parse(p.readyAt) : null;
+    const dieMs   = p.dieAt   ? Date.parse(p.dieAt)   : null;
+    const prod = p.produce && STATE.decoder && STATE.decoder.produce && STATE.decoder.produce[p.produce];
+    const wikiBase = 'https://oldschool.runescape.wiki/w/';
+    const wikiLink = p.produce ? `${wikiBase}${encodeURIComponent(name.replace(/\s/g, '_'))}` : null;
+    body.innerHTML = `
+      <dl class="kv kv-wide">
+        <dt>State</dt><dd>${esc(prettyState(p.state))} ${p._synthetic ? '<span class="chip chip-neutral">synthetic</span>' : ''}</dd>
+        <dt>Implementation</dt><dd>${esc(prettyImp(p.implementation || '?'))}</dd>
+        <dt>Region ID</dt><dd><code>${esc(String(p.regionId))}</code></dd>
+        <dt>Varbit ID</dt><dd><code>${esc(String(p.varbitId))}</code></dd>
+        <dt>Raw varbit value</dt><dd><code>${p.varbitValue != null ? esc(String(p.varbitValue)) : '—'}</code></dd>
+        <dt>Compost</dt><dd>${compostLabel(p.compost)}</dd>
+        <dt>Protection paid</dt><dd>${p.protectedPaid ? '<span class="chip chip-prot">✓ paid</span>' : '<span class="chip chip-neutral">no</span>'}</dd>
+        <dt>Cycle started</dt><dd>${p.cycleStartedAt ? esc(new Date(p.cycleStartedAt).toLocaleString()) : '—'}</dd>
+        <dt>Last updated</dt><dd>${p.lastUpdated ? esc(new Date(p.lastUpdated).toLocaleString()) : '—'}</dd>
+        <dt>Ready at</dt><dd>${readyMs ? esc(new Date(readyMs).toLocaleString()) + ' <span class="subtle">(' + formatRemaining(readyMs - now) + ')</span>' : '—'}</dd>
+        <dt>Dies next tick at</dt><dd>${dieMs ? esc(new Date(dieMs).toLocaleString()) + ' <span class="subtle">(' + formatRemaining(dieMs - now) + ')</span>' : '—'}</dd>
+        ${prod ? `<dt>Produce stages / tick</dt><dd>${prod.stages}  stages  &times;  ${prod.tickrate} min  =  ${formatMinutes(prod.stages * prod.tickrate)}</dd>` : ''}
+        ${p._acc ? `<dt>Account</dt><dd>${esc(p._acc.displayName || p._acc.hash)}</dd>` : ''}
+      </dl>
+      ${wikiLink ? `<p style="margin-top:12px;"><a href="${esc(wikiLink)}" target="_blank" rel="noopener">Open "${esc(name)}" on OSRS Wiki &rsaquo;</a></p>` : ''}
+    `;
+    openDialog('patch-detail');
   }
 
   function cardHtml(p) {
@@ -699,36 +793,72 @@
     const favKey = `${p.regionId}.${p.varbitId}`;
     const favOn = STATE.favorites.has(favKey);
 
-    return `<article class="card ${stateCls} ${extraCls}">
-      <button class="fav ${favOn ? 'on' : ''}" data-key="${esc(favKey)}" title="Toggle favorite" aria-pressed="${favOn}">★</button>
+    const dieBlock = p.state === 'DISEASED' && p.dieAt
+      ? `<div class="card-die"><span class="chip chip-warn">cures by <span data-die-at="${esc(p.dieAt)}">${esc(formatRemaining(Date.parse(p.dieAt) - now))}</span></span></div>`
+      : '';
+    const glyph = stateGlyph(p);
+    const favLabel = (favOn ? 'Unfavorite ' : 'Favorite ') + produceLabel;
+
+    return `<article class="card ${stateCls} ${extraCls}" data-key="${esc(favKey)}" tabindex="0" role="button" aria-label="${esc(produceLabel + ' at ' + prettyRegion(p.region || ''))}">
+      <button class="fav ${favOn ? 'on' : ''}" data-key="${esc(favKey)}" data-name="${esc(produceLabel)}" title="${esc(favLabel)}" aria-label="${esc(favLabel)}" aria-pressed="${favOn}">★</button>
       <header>
         <span class="produce">${icon}${esc(produceLabel)}</span>
         <span class="region">${esc(prettyRegion(p.region))}</span>
       </header>
-      <div class="ring-wrap">${circ}<span class="time" ${ready?`data-ready-at="${esc(p.readyAt)}"`:''}>${esc(timeLabel)}</span></div>
+      <div class="ring-wrap">${circ}<span class="time" ${ready?`data-ready-at="${esc(p.readyAt)}"`:''}>${esc(timeLabel)}</span>${glyph}</div>
+      ${dieBlock}
       <footer>${compostChip} ${prot} ${accTag}</footer>
     </article>`;
+  }
+
+  function stateGlyph(p) {
+    const s = p.state;
+    if (s === 'HARVESTABLE') return '<span class="state-glyph" aria-hidden="true" title="Ready">✓</span>';
+    if (s === 'DISEASED')    return '<span class="state-glyph warn" aria-hidden="true" title="Diseased">⚠</span>';
+    if (s === 'DEAD')        return '<span class="state-glyph bad" aria-hidden="true" title="Dead">✕</span>';
+    return '';
   }
 
   // ================================================================
   // Page: Timeline
   // ================================================================
+  const TIMELINE_WINDOWS = { '24h': 24*60*60*1000, '48h': 48*60*60*1000, '7d': 7*24*60*60*1000 };
+
   function renderTimeline(root) {
+    const win = safeGet('farmwatch.tl.window') || '24h';
+    const windowMs = TIMELINE_WINDOWS[win] || TIMELINE_WINDOWS['24h'];
     const patches = applySearch(currentAccountPatches());
-    const withTimes = patches.filter(p => p.readyAt).sort((a,b) => Date.parse(a.readyAt) - Date.parse(b.readyAt));
+    const now = Date.now();
+    const start = now - (windowMs / 6);
+    const end   = start + windowMs;
+    const withTimes = patches
+      .filter(p => p.readyAt)
+      .filter(p => { const t = Date.parse(p.readyAt); return t >= start && t <= end; })
+      .sort((a,b) => Date.parse(a.readyAt) - Date.parse(b.readyAt));
+
+    const winRadio = Object.keys(TIMELINE_WINDOWS).map(k => `
+      <label class="toggle"><input type="radio" name="tl-win" value="${k}" ${win === k ? 'checked':''}> ${k}</label>
+    `).join('');
+
     root.innerHTML = `
-      <div class="page-head"><div>
-        <h1>Timeline</h1>
-        <p>Next 24 hours of patch readiness.</p>
-      </div></div>
+      <div class="page-head">
+        <div>
+          <h1>Timeline</h1>
+          <p>Upcoming patch readiness in a scrolling window.</p>
+        </div>
+        <div class="page-head-tools">
+          <div class="filter-bar inline">${winRadio}</div>
+        </div>
+      </div>
     `;
+    root.querySelectorAll('input[name="tl-win"]').forEach(r => {
+      r.addEventListener('change', e => { safeSet('farmwatch.tl.window', e.target.value); renderRoute(); });
+    });
+
     if (!withTimes.length) {
-      root.appendChild(mkEmpty('No upcoming events', 'Plant something, or visit a patch so its countdown gets predicted.'));
+      root.appendChild(mkEmpty('No events in this window', `Plant something, or widen the window above (currently ${esc(win)}).`));
       return;
     }
-    const now = Date.now();
-    const windowMs = 24 * 60 * 60 * 1000;
-    const start = now - (windowMs / 3);
     const nowFrac = (now - start) / windowMs;
     const rows = withTimes.map(p => {
       const t = Date.parse(p.readyAt);
@@ -741,7 +871,7 @@
     }).join('');
     const host = document.createElement('div');
     host.className = 'panel';
-    host.innerHTML = `<h2 class="panel-head">Patches by ready time</h2><div class="timeline">${rows}</div>`;
+    host.innerHTML = `<h2 class="panel-head">Patches by ready time <span class="right">${withTimes.length} in ${esc(win)}</span></h2><div class="timeline">${rows}</div>`;
     root.appendChild(host);
   }
 
@@ -1157,6 +1287,11 @@
           <dt>Snapshot cached</dt><dd>${safeGet(LS.snapshot) ? 'yes' : 'no'}</dd>
         </dl>
         <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" id="export-fav">Export favorites</button>
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer;">
+            Import favorites
+            <input type="file" id="import-fav" accept="application/json,.json" style="display:none;" />
+          </label>
           <button class="btn btn-ghost btn-sm" id="clear-fav">Clear favorites</button>
           <button class="btn btn-ghost btn-sm" id="export-state">Export current state (JSON)</button>
           <button class="btn btn-ghost btn-sm" id="wipe-all">Wipe all local Farmwatch data</button>
@@ -1193,7 +1328,33 @@
       safeSet(LS.notify, JSON.stringify(STATE.notify));
     });
     document.getElementById('clear-fav').addEventListener('click', () => {
+      if (!confirm('Clear every favorite patch?')) return;
       STATE.favorites.clear(); safeRemove(LS.favorites); renderRoute();
+    });
+    document.getElementById('export-fav').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify({ farmwatch: 'favorites', v: 1, favorites: [...STATE.favorites] }, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'farmwatch-favorites-' + Date.now() + '.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+    document.getElementById('import-fav').addEventListener('change', e => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try {
+          const j = JSON.parse(r.result);
+          const arr = Array.isArray(j) ? j : (j && Array.isArray(j.favorites) ? j.favorites : null);
+          if (!arr) throw new Error('not a favorites file');
+          for (const k of arr) if (typeof k === 'string') STATE.favorites.add(k);
+          safeSet(LS.favorites, JSON.stringify([...STATE.favorites]));
+          renderRoute();
+          alert('Imported. Favorites: ' + STATE.favorites.size);
+        } catch (err) { alert('Could not import: ' + err.message); }
+      };
+      r.readAsText(f);
     });
     document.getElementById('export-state').addEventListener('click', () => {
       const blob = new Blob([JSON.stringify(STATE.data || {}, null, 2)], { type: 'application/json' });
@@ -1327,6 +1488,19 @@
       const t = Date.parse(el.dataset.readyAt);
       el.textContent = formatRemaining(t - Date.now());
     });
+    document.querySelectorAll('[data-die-at]').forEach(el => {
+      const t = Date.parse(el.dataset.dieAt);
+      el.textContent = formatRemaining(t - Date.now());
+    });
+    const sync = document.getElementById('sync-chip');
+    if (sync) {
+      if (STATE.lastSync) {
+        const ago = Math.max(0, Math.floor((Date.now() - STATE.lastSync) / 1000));
+        sync.textContent = 'synced ' + (ago < 60 ? ago + 's ago' : Math.floor(ago/60) + 'm ago');
+      } else {
+        sync.textContent = STATE.offline ? '' : '';
+      }
+    }
   }
 
   function maybeNotify() {

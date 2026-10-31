@@ -65,20 +65,23 @@
   <div class="shell">
     <header class="topbar">
       <div class="crumbs">
-        <span class="crumb">Farmwatch</span>
+        <a class="crumb crumb-home" href="#/dashboard">Farmwatch</a>
         <span class="crumb-sep">/</span>
         <span class="crumb crumb-active" id="crumb-page">Dashboard</span>
       </div>
       <div class="topbar-tools">
         <label class="search">
           <span class="search-ico" aria-hidden="true">&#x1F50D;</span>
-          <input id="search-input" type="search" placeholder="Search produce, region, state&hellip;" autocomplete="off" />
+          <input id="search-input" type="search" placeholder="Search produce, region, state&hellip;" autocomplete="off" aria-label="Search patches" />
         </label>
+        <span id="sync-chip" class="sync-chip" title="Last sync time"></span>
+        <button id="refresh-btn" class="icon-btn" aria-label="Refresh now" title="Refresh now (R)">&#x21BB;</button>
         <label class="acc-switch">
           <span class="sr-only">Account</span>
           <select id="account-select" aria-label="Account"></select>
         </label>
         <button id="theme-toggle" class="icon-btn" aria-label="Toggle theme" title="Theme">&#9681;</button>
+        <button id="shortcuts-btn" class="icon-btn" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">?</button>
       </div>
     </header>
 
@@ -97,6 +100,36 @@
       <p class="empty-body"></p>
     </div>
   </template>
+
+  <dialog id="patch-detail" class="dlg" aria-labelledby="pd-title">
+    <form method="dialog" class="dlg-form">
+      <header class="dlg-head">
+        <h2 id="pd-title">Patch</h2>
+        <button value="close" class="icon-btn" aria-label="Close">&times;</button>
+      </header>
+      <div class="dlg-body" id="pd-body"></div>
+    </form>
+  </dialog>
+
+  <dialog id="shortcuts-dlg" class="dlg" aria-labelledby="sc-title">
+    <form method="dialog" class="dlg-form">
+      <header class="dlg-head">
+        <h2 id="sc-title">Keyboard shortcuts</h2>
+        <button value="close" class="icon-btn" aria-label="Close">&times;</button>
+      </header>
+      <div class="dlg-body">
+        <table class="shortcut-tbl">
+          <tbody>
+            <tr><td><kbd>/</kbd></td>                   <td>Focus the search box</td></tr>
+            <tr><td><kbd>R</kbd></td>                   <td>Refresh from the plugin now</td></tr>
+            <tr><td><kbd>?</kbd></td>                   <td>Show this help</td></tr>
+            <tr><td><kbd>Esc</kbd></td>                 <td>Close dialogs or clear search</td></tr>
+            <tr><td><kbd>1</kbd>&ndash;<kbd>9</kbd></td><td>Jump to each sidebar page in order</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </form>
+  </dialog>
 
   <script src="app.js" defer></script>
 </body>
