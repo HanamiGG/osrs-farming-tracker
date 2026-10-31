@@ -28,8 +28,8 @@ import net.runelite.client.util.ImageUtil;
 @Slf4j
 @PluginDescriptor(
     name = "Farmwatch",
-    description = "Exposes farming patch state over loopback HTTP + JSON snapshot",
-    tags = {"farming", "timers", "tracker", "web", "dashboard"}
+    description = "Potion planner for ironmen (sidebar) with a farming-patch mirror behind it",
+    tags = {"potion", "planner", "ironman", "herblore", "farming", "timers", "tracker", "web", "dashboard"}
 )
 public class FarmwatchPlugin extends Plugin
 {

@@ -1,11 +1,19 @@
 # osrs-farming-tracker (Farmwatch)
 
-A **RuneLite plugin** + **companion webpage** that mirrors your Old
-School RuneScape farming patches from the stock Time Tracking plugin
-into a live, filterable dashboard you can open in any browser.
+A **RuneLite plugin** with two faces:
+
+- **Sidebar Potion Planner** for ironmen — list the potions you want to
+  brew, see herb + secondary totals, cross-referenced against your bank
+  and your currently-growing farming patches (with an actual yield
+  estimate from the OSRS chance-to-save-a-life formula, your Farming
+  level, and whether you're wearing magic secateurs).
+- **Companion webpage** — a nicer dashboard than the in-game Time
+  Tracking tab, served live from the plugin or offline from a saved
+  JSON snapshot.
 
 The plugin reuses the stock Farming Tracker's varbit/enum mapping
-(doesn't try to reinvent it) and exposes state two ways:
+(doesn't try to reinvent it) and exposes state two ways for the web
+dashboard:
 
 - **Live:** loopback HTTP server at `http://127.0.0.1:17060`
 - **Snapshot:** JSON file at `~/.runelite/osrs-farming-tracker/state-*.json`
@@ -22,12 +30,15 @@ falls back to drag-and-drop snapshot upload when it isn't.
    is side-loaded only — see dev section below until the Plugin Hub PR
    lands.)_
 2. **Enable it.** Toggle it on in the plugin list. Default config is
-   fine; the loopback server starts automatically.
-3. **Open the dashboard.** <https://hanamigg.github.io/osrs-farming-tracker/>
-4. **Log into OSRS.** As soon as you log in, Farmwatch primes itself
-   from everything the stock Time Tracking plugin has already recorded.
-   The dashboard will show your patches with countdowns, compost tier,
-   and protection status within a few seconds.
+   fine; the loopback server starts automatically and the Potion
+   Planner sidebar icon appears.
+3. **Open the Potion Planner.** Click the sidebar icon, set how many
+   of each potion you want to brew, press Compute. Open your bank
+   once so the "have / short" math kicks in. Visit your herb patches
+   so the "growing" line can tell you what's on the way.
+4. **Open the dashboard** (optional). <https://hanamigg.github.io/osrs-farming-tracker/>
+   As soon as you log in, Farmwatch primes itself from everything the
+   stock Time Tracking plugin has already recorded.
 
 **Don't have the plugin running right now?** The dashboard works
 offline too. On the Connection page, click "Load sample data" to see
