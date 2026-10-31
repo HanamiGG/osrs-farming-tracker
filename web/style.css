@@ -576,6 +576,22 @@ a:hover { color: var(--ink); }
 }
 .form-help { grid-column: 2; color: var(--ink-mute); font-size: 12px; margin-top: -4px; }
 
+.diag {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--neutral);
+  font-size: 13px;
+}
+.diag strong { display: block; margin-bottom: 4px; color: var(--ink); font-size: 14px; }
+.diag p      { margin: 4px 0; color: var(--ink-dim); }
+.diag code   { background: var(--bg-elev); padding: 1px 5px; border-radius: 3px; }
+.diag pre    { background: var(--bg-elev); padding: 8px 10px; border-radius: 4px; overflow-x: auto; }
+.diag-warn   { border-left-color: var(--soon); }
+.diag-bad    { border-left-color: var(--dead); }
+
 .drop-zone {
   border: 1px dashed var(--rule);
   border-radius: var(--r-md);

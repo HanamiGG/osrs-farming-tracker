@@ -10,7 +10,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
@@ -53,6 +52,8 @@ public class LocalServer
                 }));
                 http.createContext("/state", this::handleState);
                 http.createContext("/accounts", this::handleAccounts);
+                http.createContext("/health", this::handleHealth);
+                http.createContext("/", this::handleRoot);
                 http.start();
                 boundPort = tryPort;
                 refreshSnapshot(state);
@@ -123,6 +124,55 @@ public class LocalServer
         if (!ex.getRequestMethod().equals("GET"))    { ex.sendResponseHeaders(405, -1); return; }
         Snapshot s = snapshot.get();
         serveJson(ex, s.accounts, s.accountsEtag);
+    }
+
+    /**
+     * Liveness probe. Deliberately bypasses the CORS allowlist and never
+     * reflects an Origin header, so a browser on any origin can detect
+     * "plugin is running" and then separately learn from a /state 403 that
+     * its origin specifically is blocked. Returns a tiny JSON body with the
+     * plugin version so the dashboard can show it in the connection panel.
+     */
+    private void handleHealth(HttpExchange ex) throws IOException
+    {
+        if (ex.getRequestMethod().equals("OPTIONS"))
+        {
+            ex.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            ex.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, OPTIONS");
+            ex.sendResponseHeaders(204, -1);
+            return;
+        }
+        if (!ex.getRequestMethod().equals("GET")) { ex.sendResponseHeaders(405, -1); return; }
+        byte[] body = ("{\"ok\":true,\"pluginVersion\":\"" + JsonCodec.pluginVersion() + "\"}")
+            .getBytes(StandardCharsets.UTF_8);
+        ex.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        ex.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
+        ex.getResponseHeaders().set("Cache-Control", "no-store");
+        ex.sendResponseHeaders(200, body.length);
+        try (OutputStream os = ex.getResponseBody()) { os.write(body); }
+    }
+
+    /**
+     * Catches browsers that navigate directly to http://127.0.0.1:17060/ and
+     * returns a small human-readable landing page pointing at the dashboard.
+     */
+    private void handleRoot(HttpExchange ex) throws IOException
+    {
+        if (!"/".equals(ex.getRequestURI().getPath()))
+        {
+            ex.sendResponseHeaders(404, -1);
+            return;
+        }
+        byte[] body = ("<!doctype html><meta charset=utf-8><title>Farmwatch plugin</title>"
+            + "<body style=\"font:14px/1.5 system-ui;max-width:40em;margin:3em auto;padding:0 1em\">"
+            + "<h1>Farmwatch is running</h1>"
+            + "<p>Open the dashboard at "
+            + "<a href=\"https://hanamigg.github.io/osrs-farming-tracker/\">hanamigg.github.io/osrs-farming-tracker</a>.</p>"
+            + "<p>Endpoints: <code>/state</code>, <code>/accounts</code>, <code>/state/&lt;hash&gt;</code>, <code>/health</code>.</p>"
+            + "</body>").getBytes(StandardCharsets.UTF_8);
+        ex.getResponseHeaders().set("Content-Type", "text/html; charset=utf-8");
+        ex.sendResponseHeaders(200, body.length);
+        try (OutputStream os = ex.getResponseBody()) { os.write(body); }
     }
 
     private void serveJson(HttpExchange ex, byte[] bytes, String etag) throws IOException
@@ -229,20 +279,4 @@ public class LocalServer
         }
     }
 
-    @SuppressWarnings("unused")
-    private static byte[] joinedBytes(byte[]... parts)
-    {
-        int n = 0;
-        for (byte[] p : parts) n += p.length;
-        byte[] out = new byte[n];
-        int off = 0;
-        for (byte[] p : parts) { System.arraycopy(p, 0, out, off, p.length); off += p.length; }
-        return out;
-    }
-
-    @SuppressWarnings("unused")
-    private static boolean arrayEq(byte[] a, byte[] b)
-    {
-        return Arrays.equals(a, b);
-    }
 }

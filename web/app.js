@@ -44,6 +44,8 @@
     route:      'dashboard',
     timer:      null,
     offline:    true,
+    connErr:    null,
+    lastSync:   null,
     decoder:    null,
     decoderErr: null,
     varbitInv:  {},
@@ -168,24 +170,63 @@
     try { STATE.data = JSON.parse(raw); } catch { safeRemove(LS.snapshot); }
   }
 
-  function tryFetch() {
+  function tryFetch(opts) {
     const ac = new AbortController();
     const t = setTimeout(() => ac.abort(), 2500);
     const headers = STATE.etag ? { 'If-None-Match': STATE.etag } : {};
-    fetch(STATE.endpoint.replace(/\/+$/, '') + '/state', { signal: ac.signal, headers })
+    const base = STATE.endpoint.replace(/\/+$/, '');
+    return fetch(base + '/state', { signal: ac.signal, headers })
       .then(async r => {
         clearTimeout(t);
-        if (r.status === 304) { setConnected(true); return; }
+        if (r.status === 304) { STATE.lastSync = Date.now(); setConnected(true); return; }
+        if (r.status === 403) {
+          STATE.connErr = { kind: 'origin-blocked', origin: location.origin };
+          return probeHealthAfterFail();
+        }
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const etag = r.headers.get('ETag');
         const json = await r.json();
-        STATE.data = json; STATE.etag = etag;
+        STATE.data = json; STATE.etag = etag; STATE.lastSync = Date.now();
+        STATE.connErr = null;
         rebuildVarbitInv();
         safeSet(LS.snapshot, JSON.stringify(json));
         setConnected(true);
         renderRoute();
       })
-      .catch(() => { clearTimeout(t); setConnected(false); });
+      .catch(() => {
+        clearTimeout(t);
+        if (opts && opts.manual) STATE.connErr = { kind: 'unreachable' };
+        return probeHealthAfterFail();
+      });
+  }
+
+  // Secondary probe used when /state failed. Hits /health (which bypasses the
+  // CORS allowlist) to disambiguate "plugin is down" from "plugin is up but
+  // my origin is blocked". Doesn't throw.
+  function probeHealthAfterFail() {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 1500);
+    return fetch(STATE.endpoint.replace(/\/+$/, '') + '/health', { signal: ac.signal, cache: 'no-store' })
+      .then(async r => {
+        clearTimeout(t);
+        if (r.ok) {
+          try { STATE.healthInfo = await r.json(); } catch { STATE.healthInfo = { ok: true }; }
+          if (!STATE.connErr) STATE.connErr = { kind: 'origin-blocked', origin: location.origin };
+          setConnected(false, 'blocked');
+        } else {
+          STATE.healthInfo = null;
+          STATE.connErr = { kind: 'unreachable' };
+          setConnected(false);
+        }
+        renderRoute();
+      })
+      .catch(() => {
+        clearTimeout(t);
+        STATE.healthInfo = null;
+        STATE.connErr = { kind: 'unreachable' };
+        setConnected(false);
+        renderRoute();
+      });
   }
 
   function readSnapshotFile(f) {
@@ -215,6 +256,7 @@
     STATE.offline = !ok;
     if (ok) setChip('Live', 'chip-ok');
     else if (mode === 'snapshot') setChip('Snapshot', 'chip-neutral');
+    else if (mode === 'blocked')  setChip('Origin blocked', 'chip-warn');
     else setChip('Offline', 'chip-bad');
   }
 
@@ -987,8 +1029,9 @@
           <dt>Endpoint</dt><dd><code>${esc(STATE.endpoint)}</code></dd>
           <dt>Accounts loaded</dt><dd>${(STATE.data && STATE.data.accounts && STATE.data.accounts.length) || 0}</dd>
           <dt>Last payload at</dt><dd>${STATE.data && STATE.data.generatedAt ? new Date(STATE.data.generatedAt).toLocaleString() : '—'}</dd>
-          <dt>Plugin version</dt><dd>${esc((STATE.data && STATE.data.pluginVersion) || '—')}</dd>
+          <dt>Plugin version</dt><dd>${esc((STATE.data && STATE.data.pluginVersion) || (STATE.healthInfo && STATE.healthInfo.pluginVersion) || '—')}</dd>
         </dl>
+        ${renderConnDiagnostic()}
       </div>
     `;
 
@@ -1023,9 +1066,29 @@
     document.getElementById('load-sample').addEventListener('click', loadSampleData);
 
     const el = document.getElementById('conn-stat');
-    if (STATE.offline && !STATE.data) el.innerHTML = '<span class="chip chip-bad">Offline</span>';
+    if (STATE.connErr && STATE.connErr.kind === 'origin-blocked') el.innerHTML = '<span class="chip chip-warn">Origin blocked</span>';
+    else if (STATE.offline && !STATE.data) el.innerHTML = '<span class="chip chip-bad">Offline</span>';
     else if (STATE.offline) el.innerHTML = '<span class="chip chip-neutral">Snapshot</span>';
     else el.innerHTML = '<span class="chip chip-ok">Live</span>';
+  }
+
+  function renderConnDiagnostic() {
+    if (!STATE.connErr) return '';
+    if (STATE.connErr.kind === 'origin-blocked') {
+      return `<div class="diag diag-warn">
+        <strong>Plugin is running but refused this origin.</strong>
+        <p>The browser sent <code>Origin: ${esc(STATE.connErr.origin)}</code> and the plugin's CORS allowlist didn't match it. In RuneLite, open the Farmwatch config and add this origin to <strong>Allowed origins</strong>:</p>
+        <pre><code>${esc(STATE.connErr.origin)}</code></pre>
+        <p class="subtle">If you're testing locally, <code>http://localhost:*</code> and <code>http://127.0.0.1:*</code> are already in the default allowlist.</p>
+      </div>`;
+    }
+    if (STATE.connErr.kind === 'unreachable') {
+      return `<div class="diag diag-bad">
+        <strong>Can't reach the plugin.</strong>
+        <p>Nothing responded at <code>${esc(STATE.endpoint)}/health</code>. Check that RuneLite is running with Farmwatch enabled, and that the <strong>Enable HTTP server</strong> toggle is on in its config.</p>
+      </div>`;
+    }
+    return '';
   }
 
   // ================================================================
@@ -1171,6 +1234,13 @@
         <ul>
           <li>a loopback HTTP server at <code>127.0.0.1:17060</code> (live), and</li>
           <li>a JSON file at <code>~/.runelite/osrs-farming-tracker/state-&lt;accthash&gt;.json</code> (snapshot).</li>
+        </ul>
+        <p>Endpoints the plugin serves:</p>
+        <ul>
+          <li><code>GET /state</code> &mdash; all accounts, varbit map, full patch payload.</li>
+          <li><code>GET /state/&lt;hash&gt;</code> &mdash; one account.</li>
+          <li><code>GET /accounts</code> &mdash; just the account summaries.</li>
+          <li><code>GET /health</code> &mdash; liveness check, CORS-free; returns the plugin version.</li>
         </ul>
         <p>This page fetches the live endpoint when the client is running, and falls back to a drag-dropped snapshot otherwise.</p>
 
