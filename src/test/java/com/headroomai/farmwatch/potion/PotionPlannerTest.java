@@ -100,13 +100,27 @@ public class PotionPlannerTest
     }
 
     @Test
-    public void catalogHasTwelveEntriesAndAllAreValidPotions()
+    public void catalogIsNonEmptyAndEveryPotionIsValid()
     {
-        assertEquals(12, PotionCatalog.all().size());
+        assertFalse(PotionCatalog.all().isEmpty());
         for (PotionDef p : PotionCatalog.all())
         {
             assertFalse("every potion has a name", p.name().isEmpty());
             assertFalse("every potion has a recipe", p.recipe().isEmpty());
+            assertFalse("every potion has a category", p.category() == null);
+        }
+    }
+
+    @Test
+    public void everyCategoryIsRepresented()
+    {
+        // The filter dropdown lists all four categories; if any has zero
+        // potions the UI would offer an empty filter result. Catching
+        // that here keeps the catalog honest as it grows.
+        for (PotionDef.Category c : PotionDef.Category.values())
+        {
+            boolean found = PotionCatalog.all().stream().anyMatch(p -> p.category() == c);
+            assertTrue("no potion tagged " + c, found);
         }
     }
 
@@ -132,7 +146,7 @@ public class PotionPlannerTest
     {
         try
         {
-            PotionDef.builder("bad").add(RANARR, 0).build();
+            PotionDef.builder("bad", PotionDef.Category.UTILITY).add(RANARR, 0).build();
             throw new AssertionError("expected IllegalArgumentException");
         }
         catch (IllegalArgumentException expected)

@@ -8,15 +8,13 @@ import com.headroomai.farmwatch.potion.ShoppingList;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
 import java.util.HashMap;
 import java.util.Map;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSpinner;
@@ -34,9 +32,13 @@ import net.runelite.client.ui.PluginPanel;
  */
 public class PotionPlannerPanel extends PluginPanel
 {
+    private static final String FILTER_ALL = "All";
+
     private final Map<PotionDef, JSpinner> inputs = new HashMap<>();
+    private final Map<PotionDef, JPanel> inputRows = new HashMap<>();
     private final JPanel outputPanel = new JPanel();
     private final JLabel emptyHint = new JLabel("Set quantities above and press Compute.");
+    private final JComboBox<String> categoryFilter = new JComboBox<>();
 
     public PotionPlannerPanel()
     {
@@ -73,7 +75,9 @@ public class PotionPlannerPanel extends PluginPanel
         JPanel body = new JPanel();
         body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
         body.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        body.add(buildInputGrid());
+        body.add(buildFilterRow());
+        body.add(Box.createVerticalStrut(6));
+        body.add(buildInputList());
         body.add(Box.createVerticalStrut(8));
         body.add(buildButtonRow());
         body.add(Box.createVerticalStrut(10));
@@ -81,39 +85,80 @@ public class PotionPlannerPanel extends PluginPanel
         return body;
     }
 
-    private JPanel buildInputGrid()
+    private JPanel buildFilterRow()
     {
-        JPanel grid = new JPanel(new GridBagLayout());
-        grid.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        grid.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        JPanel row = new JPanel(new BorderLayout(6, 0));
+        row.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.WEST;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-        gbc.insets = new Insets(2, 0, 2, 6);
+        JLabel label = new JLabel("Show:");
+        label.setFont(FontManager.getRunescapeSmallFont());
+        label.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+
+        categoryFilter.addItem(FILTER_ALL);
+        for (PotionDef.Category c : PotionDef.Category.values())
+        {
+            categoryFilter.addItem(prettyName(c));
+        }
+        categoryFilter.setSelectedItem(FILTER_ALL);
+        categoryFilter.addActionListener(e -> applyFilter());
+
+        row.add(label, BorderLayout.WEST);
+        row.add(categoryFilter, BorderLayout.CENTER);
+        return row;
+    }
+
+    private JPanel buildInputList()
+    {
+        JPanel list = new JPanel();
+        list.setLayout(new BoxLayout(list, BoxLayout.Y_AXIS));
+        list.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        list.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
         for (PotionDef potion : PotionCatalog.all())
         {
-            JLabel name = new JLabel(potion.name());
-            name.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-            name.setFont(FontManager.getRunescapeSmallFont());
-
-            JSpinner spinner = new JSpinner(new SpinnerNumberModel(0, 0, 100000, 1));
-            spinner.setPreferredSize(new Dimension(70, 22));
-            inputs.put(potion, spinner);
-
-            gbc.gridx = 0;
-            gbc.weightx = 1.0;
-            grid.add(name, gbc);
-            gbc.gridx = 1;
-            gbc.weightx = 0.0;
-            grid.add(spinner, gbc);
-            gbc.gridy++;
+            JPanel rowPanel = buildInputRow(potion);
+            inputRows.put(potion, rowPanel);
+            list.add(rowPanel);
         }
-        return grid;
+        return list;
+    }
+
+    private JPanel buildInputRow(PotionDef potion)
+    {
+        JPanel row = new JPanel(new BorderLayout(6, 0));
+        row.setOpaque(false);
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        row.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
+
+        JLabel name = new JLabel(potion.name());
+        name.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+        name.setFont(FontManager.getRunescapeSmallFont());
+
+        JSpinner spinner = new JSpinner(new SpinnerNumberModel(0, 0, 100000, 1));
+        spinner.setPreferredSize(new Dimension(70, 22));
+        inputs.put(potion, spinner);
+
+        row.add(name, BorderLayout.CENTER);
+        row.add(spinner, BorderLayout.EAST);
+        return row;
+    }
+
+    private void applyFilter()
+    {
+        Object selected = categoryFilter.getSelectedItem();
+        if (selected == null)
+        {
+            return;
+        }
+        for (Map.Entry<PotionDef, JPanel> e : inputRows.entrySet())
+        {
+            boolean visible = FILTER_ALL.equals(selected)
+                || prettyName(e.getKey().category()).equals(selected);
+            e.getValue().setVisible(visible);
+        }
+        revalidate();
+        repaint();
     }
 
     private JPanel buildButtonRow()
@@ -238,5 +283,11 @@ public class PotionPlannerPanel extends PluginPanel
             row.add(source);
         }
         return row;
+    }
+
+    private static String prettyName(PotionDef.Category c)
+    {
+        String s = c.name().toLowerCase();
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 }

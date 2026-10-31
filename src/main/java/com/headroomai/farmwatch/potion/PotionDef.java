@@ -15,33 +15,41 @@ import java.util.Map;
  */
 public final class PotionDef
 {
+    /** Grouping used by the sidebar's filter dropdown. */
+    public enum Category { COMBAT, RANGED, MAGIC, UTILITY }
+
     private final String name;
+    private final Category category;
     private final Map<Ingredient, Integer> recipe;
 
-    private PotionDef(String name, Map<Ingredient, Integer> recipe)
+    private PotionDef(String name, Category category, Map<Ingredient, Integer> recipe)
     {
         this.name = name;
+        this.category = category;
         this.recipe = Collections.unmodifiableMap(recipe);
     }
 
     public String name() { return name; }
+    public Category category() { return category; }
 
     /** Raw ingredients (flattened) and how many of each one brewed potion needs. */
     public Map<Ingredient, Integer> recipe() { return recipe; }
 
-    public static Builder builder(String name)
+    public static Builder builder(String name, Category category)
     {
-        return new Builder(name);
+        return new Builder(name, category);
     }
 
     public static final class Builder
     {
         private final String name;
+        private final Category category;
         private final Map<Ingredient, Integer> recipe = new EnumMap<>(Ingredient.class);
 
-        private Builder(String name)
+        private Builder(String name, Category category)
         {
             this.name = name;
+            this.category = category;
         }
 
         public Builder add(Ingredient ingredient, int qty)
@@ -60,7 +68,7 @@ public final class PotionDef
             {
                 throw new IllegalStateException("potion must have at least one ingredient");
             }
-            return new PotionDef(name, new EnumMap<>(recipe));
+            return new PotionDef(name, category, new EnumMap<>(recipe));
         }
     }
 }

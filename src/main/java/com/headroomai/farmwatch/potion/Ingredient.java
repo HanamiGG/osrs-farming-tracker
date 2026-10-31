@@ -41,7 +41,10 @@ public enum Ingredient
     LAVA_SCALE_SHARD(Type.SECONDARY, "Lava scale shard", "Konar / Vorkath drop; crush lava scale with pestle"),
     DRAGON_SCALE_DUST(Type.SECONDARY, "Dragon scale dust", "Blue dragons; crush blue dragon scale with pestle"),
     WINE_OF_ZAMORAK(Type.SECONDARY, "Wine of Zamorak", "Chaos Temple (Asgarnia) altar spawn — telegrab"),
-    POTATO_CACTUS(Type.SECONDARY, "Potato cactus", "Cactus patch (Farming 25) / Kalphite Lair spawns");
+    POTATO_CACTUS(Type.SECONDARY, "Potato cactus", "Cactus patch (Farming 25) / Kalphite Lair spawns"),
+    JANGERBERRIES(Type.SECONDARY, "Jangerberries", "Jangerberry bush (Farming 48) / Legends' Guild garden"),
+    MAGIC_ROOT(Type.SECONDARY, "Magic root", "Dig up magic tree stump after chopping (Farming 75)"),
+    ZULRAH_SCALES(Type.SECONDARY, "Zulrah's scales", "Zulrah drop (requires Regicide)");
 
     public enum Type { HERB, SECONDARY }
 
