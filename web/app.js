@@ -510,7 +510,7 @@
 
         <div class="panel span-6">
           <h2 class="panel-head">Favorites <span class="right">${favs.length} starred</span></h2>
-          ${favs.length === 0 ? emptyBlock('No favorites yet', 'Hit the ★ on a patch card to pin it here and (optionally) get a browser notification when it ripens.') : `
+          ${favs.length === 0 ? emptyBlock('Nothing starred', 'Star a patch to pin it here and get a browser notification before it\'s ready. Enable notifications on the Settings page.') : `
             <ul class="list-upnext">
               ${favs.sort((a,b) => patchSortKey(a) - patchSortKey(b)).slice(0, 8).map(p => {
                 const t = p.readyAt ? Date.parse(p.readyAt) : null;

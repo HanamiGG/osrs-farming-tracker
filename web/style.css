@@ -93,6 +93,21 @@ body {
 a { color: var(--accent); }
 a:hover { color: var(--ink); }
 
+/* Visible focus for every interactive thing — parchment makes default
+   browser rings nearly invisible. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+button:focus-visible, .icon-btn:focus-visible,
+.btn:focus-visible, .nav-link:focus-visible,
+input:focus-visible, select:focus-visible,
+.card:focus-visible, .fav:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .sr-only {
   position: absolute; width: 1px; height: 1px;
   padding: 0; margin: -1px; overflow: hidden;
@@ -287,6 +302,34 @@ a:hover { color: var(--ink); }
 .chip-u { color: #fff; background: var(--chip-u); border-color: var(--chip-u); }
 .chip-s { color: #fff; background: var(--chip-s); border-color: var(--chip-s); }
 .chip-c { color: #fff; background: var(--chip-c); border-color: var(--chip-c); }
+
+/* Dark theme: colored chips look harsh at full saturation on dark bg.
+   Switch to a neutral chip background with a colored inset-stripe accent so
+   the state still reads at a glance but doesn't glare. */
+:root[data-theme="dark"] .chip-ok,
+:root[data-theme="dark"] .chip-bad,
+:root[data-theme="dark"] .chip-warn,
+:root[data-theme="dark"] .chip-info {
+  color: var(--ink);
+  background: var(--bg-elev);
+}
+:root[data-theme="dark"] .chip-ok   { border-color: var(--ok);    box-shadow: inset 3px 0 0 var(--ok); }
+:root[data-theme="dark"] .chip-bad  { border-color: var(--dead);  box-shadow: inset 3px 0 0 var(--dead); }
+:root[data-theme="dark"] .chip-warn { border-color: var(--soon);  box-shadow: inset 3px 0 0 var(--soon); }
+:root[data-theme="dark"] .chip-info { border-color: var(--ready); box-shadow: inset 3px 0 0 var(--ready); }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .chip-ok,
+  :root:not([data-theme="light"]) .chip-bad,
+  :root:not([data-theme="light"]) .chip-warn,
+  :root:not([data-theme="light"]) .chip-info {
+    color: var(--ink); background: var(--bg-elev);
+  }
+  :root:not([data-theme="light"]) .chip-ok   { border-color: var(--ok);    box-shadow: inset 3px 0 0 var(--ok); }
+  :root:not([data-theme="light"]) .chip-bad  { border-color: var(--dead);  box-shadow: inset 3px 0 0 var(--dead); }
+  :root:not([data-theme="light"]) .chip-warn { border-color: var(--soon);  box-shadow: inset 3px 0 0 var(--soon); }
+  :root:not([data-theme="light"]) .chip-info { border-color: var(--ready); box-shadow: inset 3px 0 0 var(--ready); }
+}
 
 .btn {
   background: var(--accent); color: var(--accent-ink);
@@ -712,9 +755,17 @@ a:hover { color: var(--ink); }
   }
   .sidebar.open { transform: translateX(0); box-shadow: var(--sh-2); }
   .shell { margin-left: 0; }
-  .topbar { padding-left: 56px; }
-  .search { min-width: 120px; }
-  .acc-switch select { max-width: 110px; }
+  .topbar { padding-left: 56px; gap: 8px; }
+  .topbar-tools { gap: 6px; }
+  .search { min-width: 110px; }
+  .acc-switch select { max-width: 100px; }
   .form-grid { grid-template-columns: 1fr; }
   .bar-row { grid-template-columns: 100px 1fr 40px; }
+  .sync-chip { display: none; }
+  #shortcuts-btn { display: none; }
+}
+
+@media (max-width: 480px) {
+  .acc-switch { display: none; }
+  .crumbs .crumb-sep, .crumbs .crumb-active { display: none; }
 }
