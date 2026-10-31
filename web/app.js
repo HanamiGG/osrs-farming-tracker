@@ -73,7 +73,17 @@
     STATE.timer = setInterval(tryFetch, POLL_MS);
     setInterval(renderTicking, 1000);
     setInterval(maybeNotify, 30 * 1000);
+    registerServiceWorker();
   });
+
+  function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    // Only when hosted — a file:// or extension context won't allow this.
+    if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
+    navigator.serviceWorker.register('sw.js').catch(err => {
+      console.warn('[farmwatch] service worker registration failed:', err);
+    });
+  }
 
   function bindShell() {
     const navToggle = document.getElementById('nav-toggle');
