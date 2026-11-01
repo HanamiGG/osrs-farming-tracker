@@ -2,7 +2,39 @@
 
 **Project:** osrs-farming-tracker (working name "Farmwatch")
 **Location:** `C:\HeadroomAI\osrs-farming-tracker`
-**Last update:** 2026-10-29 (decoder + compost/protection + prime-on-login)
+**Last update:** 2026-11-01 (v0.3.0 — sidebar Potion Planner, farm-tick
+alignment, equipment-aware secateurs detection)
+
+## v0.3.0 — ready to pin
+
+Headline shift: Farmwatch is now a **sidebar Potion Planner for
+ironmen**, with the farming-patch mirror sitting underneath as its data
+engine. Repo and package names stayed stable so the pending Plugin Hub
+manifest survives the reframe.
+
+Shipped past v0.2.0:
+- Sidebar Potion Planner (16 potions, bank-aware have/short math,
+  category filter)
+- OSRS chance-to-save-a-life yield math for 14 brewable herbs, with
+  Farming level + magic-secateurs multiplier
+- Herb varbit decoder ported from the stock plugin's
+  `PatchImplementation.HERB.forVarbitValue` (javap port — the stock API
+  is package-private)
+- Farm-tick alignment via a port of `FarmingTracker#getTickTime` so
+  the "ready ~HH:MM" sub-line matches the stock tracker's in-game
+  prediction
+- Auto-detect of magic secateurs from `INV` + `WORN` containers; the
+  config toggle degrades to a pre-observation fallback
+
+Tests: 94 total, all green on JDK 11.
+
+To ship v0.3.0:
+1. Push the tag (`git tag -a v0.3.0 -m "..." && git push origin v0.3.0`).
+2. Bump `plugins/farmwatch` in the plugin-hub fork to the current
+   `main` SHA (same commit as the tag).
+3. See `vibe/05_plugin_hub_submission.md` for the step-by-step.
+
+## Previous (v0.2.0 era)
 
 **Live:**
 - Repo: https://github.com/HanamiGG/osrs-farming-tracker (public)

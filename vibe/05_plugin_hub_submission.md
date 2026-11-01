@@ -13,13 +13,15 @@ RuneLite dev reviews it manually (typical turnaround 1–2 weeks).
 - `runelite-plugin.properties` has `build=standard`, author `HanamiGG`,
   and a review-friendly description that states up front the server is
   on by default and explains the defenses.
-- `v0.2.0` tag is pushed; manifest file content ready at
+- `v0.3.0` tag is pushed; manifest file content ready at
   `vibe/plugin-hub-manifest.txt` (keep the `commit=` line in sync with
   the latest pre-submission commit on `main`).
 - Icon at `icon.png` (48×48, under the 48×72 max).
 - `LICENSE` is BSD-2-Clause (Plugin Hub's recommendation).
-- Full test suite (`./gradlew test`) is green: `PatchReaderTest` has
-  14 cases covering the config-mirror parser.
+- Full test suite (`./gradlew test`) is green: 94 cases across the
+  config-mirror parser, potion planner, bank/equipment trackers, herb
+  yield math, varbit decoder, growing-patch aggregator, and the
+  farm-tick alignment helper.
 
 ## Pre-flight check: likely review concerns
 
@@ -96,7 +98,7 @@ git commit -m "Add Farmwatch"
 git push -u origin add-farmwatch
 gh pr create --repo runelite/plugin-hub `
   --title "Add Farmwatch" `
-  --body "Farmwatch mirrors the stock Time Tracking farming data to disk and over a loopback HTTP server for a companion web dashboard at https://hanamigg.github.io/osrs-farming-tracker/.`n`n- Reads only, no writes to game state or stock plugin config`n- HTTP server loopback-only (127.0.0.1), CORS allowlist, read-only endpoints`n- Server is on by default so the dashboard works first-launch; one toggle disables it`n- File snapshots work whether or not the server is enabled`n`nSource: https://github.com/HanamiGG/osrs-farming-tracker`nRelease: v0.2.0"
+  --body "Farmwatch mirrors the stock Time Tracking farming data to disk and over a loopback HTTP server for a companion web dashboard at https://hanamigg.github.io/osrs-farming-tracker/.`n`n- Reads only, no writes to game state or stock plugin config`n- HTTP server loopback-only (127.0.0.1), CORS allowlist, read-only endpoints`n- Server is on by default so the dashboard works first-launch; one toggle disables it`n- File snapshots work whether or not the server is enabled`n`nSource: https://github.com/HanamiGG/osrs-farming-tracker`nRelease: v0.3.0"
 ```
 
 ## Step 4 — babysit the CI
