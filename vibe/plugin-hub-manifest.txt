@@ -1,2 +1,2 @@
 repository=https://github.com/HanamiGG/osrs-farming-tracker.git
-commit=4e29d0e9a60dc352ce0f53cc4d8440a42a50a4b0
+commit=6596d87f7a0a6aab00e9cc94ed885dfb00fd5aea
