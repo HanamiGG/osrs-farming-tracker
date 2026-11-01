@@ -61,7 +61,7 @@ public interface FarmwatchConfig extends Config
     @ConfigItem(
         keyName = "assumeMagicSecateurs",
         name = "Assume magic secateurs",
-        description = "When computing expected herbs from your growing patches, assume you'll be wearing magic secateurs at harvest (+10% yield). Leave on unless you really don't use them.",
+        description = "Fallback for the yield math (+10% per patch) used only until the plugin observes your inventory or equipment this session. Once observed, we honour what you actually have.",
         position = 7
     )
     default boolean assumeMagicSecateurs() { return true; }

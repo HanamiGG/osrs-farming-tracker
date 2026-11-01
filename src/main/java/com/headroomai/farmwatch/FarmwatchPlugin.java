@@ -3,6 +3,7 @@ package com.headroomai.farmwatch;
 import com.google.inject.Provides;
 import com.headroomai.farmwatch.model.AccountState;
 import com.headroomai.farmwatch.potion.BankTracker;
+import com.headroomai.farmwatch.potion.EquipmentTracker;
 import com.headroomai.farmwatch.ui.PotionPlannerPanel;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -45,6 +46,7 @@ public class FarmwatchPlugin extends Plugin
     private LocalServer server;
     private NavigationButton potionNav;
     private BankTracker bankTracker;
+    private EquipmentTracker equipmentTracker;
 
     private boolean dirty = false;
 
@@ -80,13 +82,15 @@ public class FarmwatchPlugin extends Plugin
         if (config.showPotionPanel())
         {
             bankTracker = new BankTracker();
+            equipmentTracker = new EquipmentTracker();
             eventBus.register(bankTracker);
+            eventBus.register(equipmentTracker);
             BufferedImage icon = ImageUtil.loadImageResource(FarmwatchPlugin.class, "/com/headroomai/farmwatch/panel-icon.png");
             potionNav = NavigationButton.builder()
                 .tooltip("Potion Planner")
                 .icon(icon)
                 .priority(5)
-                .panel(new PotionPlannerPanel(bankTracker, state, client, config))
+                .panel(new PotionPlannerPanel(bankTracker, equipmentTracker, state, client, config))
                 .build();
             clientToolbar.addNavigation(potionNav);
         }
@@ -104,6 +108,11 @@ public class FarmwatchPlugin extends Plugin
         {
             eventBus.unregister(bankTracker);
             bankTracker = null;
+        }
+        if (equipmentTracker != null)
+        {
+            eventBus.unregister(equipmentTracker);
+            equipmentTracker = null;
         }
         if (server != null)
         {

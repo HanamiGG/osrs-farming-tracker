@@ -3,6 +3,7 @@ package com.headroomai.farmwatch.ui;
 import com.headroomai.farmwatch.FarmwatchConfig;
 import com.headroomai.farmwatch.FarmwatchState;
 import com.headroomai.farmwatch.potion.BankTracker;
+import com.headroomai.farmwatch.potion.EquipmentTracker;
 import com.headroomai.farmwatch.potion.GrowingHerbs;
 import com.headroomai.farmwatch.potion.HerbVarbitDecoder;
 import com.headroomai.farmwatch.potion.HerbYield;
@@ -57,6 +58,7 @@ public class PotionPlannerPanel extends PluginPanel
         DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault());
 
     private final BankTracker bankTracker;
+    private final EquipmentTracker equipmentTracker;
     private final FarmwatchState farmState;
     private final Client client;
     private final FarmwatchConfig config;
@@ -67,12 +69,14 @@ public class PotionPlannerPanel extends PluginPanel
     private final JComboBox<String> categoryFilter = new JComboBox<>();
 
     public PotionPlannerPanel(BankTracker bankTracker,
+                              EquipmentTracker equipmentTracker,
                               FarmwatchState farmState,
                               Client client,
                               FarmwatchConfig config)
     {
         super();
         this.bankTracker = bankTracker;
+        this.equipmentTracker = equipmentTracker;
         this.farmState = farmState;
         this.client = client;
         this.config = config;
@@ -399,8 +403,11 @@ public class PotionPlannerPanel extends PluginPanel
         GrowingHerbs.Aggregate agg = growing.get(p);
         if (agg == null || agg.yieldingPatches() == 0) return null;
 
-        boolean assumeSecateurs = config != null && config.assumeMagicSecateurs();
-        int expected = HerbYield.expectedFromPatches(ing, agg.yieldingPatches(), farmingLevel(), assumeSecateurs);
+        boolean configDefault = config == null || config.assumeMagicSecateurs();
+        boolean useSecateurs = equipmentTracker != null
+            ? equipmentTracker.resolve(configDefault)
+            : configDefault;
+        int expected = HerbYield.expectedFromPatches(ing, agg.yieldingPatches(), farmingLevel(), useSecateurs);
         if (expected <= 0) return null;
 
         StringBuilder sb = new StringBuilder();
