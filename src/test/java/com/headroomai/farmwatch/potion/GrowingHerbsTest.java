@@ -91,11 +91,39 @@ public class GrowingHerbsTest
     public void twoRanarrPatchesPickTheEarliestReadyTime()
     {
         addPatch(11062, 4771, 32, Instant.parse("2026-10-31T12:00:00Z"));
-        addPatch(12083, 4772, 34, Instant.parse("2026-10-31T12:30:00Z")); // stage 2 (40 min left)
+        addPatch(12083, 4772, 34, Instant.parse("2026-10-31T12:30:00Z")); // stage 2 (2 ticks left)
         GrowingHerbs.Aggregate ran = GrowingHerbs.aggregate(state, ACCT).get(HerbVarbitDecoder.Produce.RANARR);
         assertEquals(2, ran.growingPatches);
-        // 12:00 + 80 = 13:20; 12:30 + 40 = 13:10. Earliest: 13:10.
-        assertEquals(Instant.parse("2026-10-31T13:10:00Z"), ran.earliestReadyAt);
+        // Without a learned farm-tick offset we snap to a wall-clock-aligned grid at :00/:20/:40.
+        //   Patch A (12:00, 4 ticks): next 4 ticks are 12:20 -> 13:20.
+        //   Patch B (12:30, 2 ticks): 12:30 floors to 12:20, +2 ticks = 13:00.
+        // Earliest: 13:00.
+        assertEquals(Instant.parse("2026-10-31T13:00:00Z"), ran.earliestReadyAt);
+    }
+
+    @Test
+    public void learnedFarmTickOffsetShiftsReadyTime()
+    {
+        AccountState acc = state.touch(ACCT);
+        acc.setFarmTickOffset(5);     // grid is at :05/:25/:45
+        acc.setFarmTickOffsetPrecision(20);
+        addPatch(11062, 4771, 32, Instant.parse("2026-10-31T12:00:00Z")); // stage 0, 4 ticks left
+        GrowingHerbs.Aggregate ran = GrowingHerbs.aggregate(state, ACCT).get(HerbVarbitDecoder.Produce.RANARR);
+        // adjusted = epoch(12:00)+300; floored = epoch(12:00); result = epoch(12:00) + 4*1200 - 300
+        // = epoch(13:15).
+        assertEquals(Instant.parse("2026-10-31T13:15:00Z"), ran.earliestReadyAt);
+    }
+
+    @Test
+    public void lowPrecisionOffsetIsIgnored()
+    {
+        AccountState acc = state.touch(ACCT);
+        acc.setFarmTickOffset(5);
+        acc.setFarmTickOffsetPrecision(10); // < herb tickRate=20 AND < 40 -> ignored
+        addPatch(11062, 4771, 32, Instant.parse("2026-10-31T12:00:00Z"));
+        GrowingHerbs.Aggregate ran = GrowingHerbs.aggregate(state, ACCT).get(HerbVarbitDecoder.Produce.RANARR);
+        // Falls back to zero-offset projection = 13:20 (same as if offset were null).
+        assertEquals(Instant.parse("2026-10-31T13:20:00Z"), ran.earliestReadyAt);
     }
 
     @Test

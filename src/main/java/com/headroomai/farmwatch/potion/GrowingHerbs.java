@@ -3,7 +3,6 @@ package com.headroomai.farmwatch.potion;
 import com.headroomai.farmwatch.FarmwatchState;
 import com.headroomai.farmwatch.model.AccountState;
 import com.headroomai.farmwatch.model.PatchState;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.EnumMap;
 import java.util.Map;
@@ -13,10 +12,12 @@ import java.util.Map;
  * aggregates them by produce: how many of each herb are growing or
  * harvestable, and when the earliest one will be ready.
  *
- * <p>Each herb has 4 growing stages × 20 min = 80 min total. We don't
- * try to align to the game's farm-tick clock (the stock Time Tracking
- * plugin stores a per-account offset for that); the planner just needs
- * an approximate "~HH:MM" so the user knows roughly when to log in.
+ * <p>Each herb has 4 growing stages × 20 min = 80 min total. Ready-at
+ * is snapped to the game's shared farm-tick grid via {@link FarmTicks},
+ * using the per-account offset the stock Time Tracking plugin learned
+ * (mirrored in {@link AccountState#getFarmTickOffset()}). Without a
+ * learned offset we assume a wall-clock-aligned grid, matching the
+ * stock plugin's fallback.
  */
 public final class GrowingHerbs
 {
@@ -78,6 +79,8 @@ public final class GrowingHerbs
         {
             return new EnumMap<>(HerbVarbitDecoder.Produce.class);
         }
+        Integer offset = acc.getFarmTickOffset();
+        Integer precision = acc.getFarmTickOffsetPrecision();
 
         for (PatchState p : acc.patches().values())
         {
@@ -97,8 +100,11 @@ public final class GrowingHerbs
                     if (last != null)
                     {
                         int stagesLeft = HERB_TOTAL_STAGES - d.stage;
-                        Instant readyAt = last.plus(Duration.ofMinutes((long) stagesLeft * HERB_STAGE_MINUTES));
-                        earliestReady.merge(d.produce, readyAt, (a, b) -> a.isBefore(b) ? a : b);
+                        Instant readyAt = FarmTicks.readyAt(last, stagesLeft, HERB_STAGE_MINUTES, offset, precision);
+                        if (readyAt != null)
+                        {
+                            earliestReady.merge(d.produce, readyAt, (a, b) -> a.isBefore(b) ? a : b);
+                        }
                     }
                     break;
                 case DISEASED:
