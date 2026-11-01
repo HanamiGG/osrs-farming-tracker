@@ -34,24 +34,14 @@ import net.runelite.api.Client;
 import net.runelite.api.Skill;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
-import net.runelite.client.ui.PluginPanel;
 
 /**
- * Sidebar panel: the user sets how many of each potion they want to
- * brew, we show the raw herb + secondary shopping list cross-referenced
- * against their bank snapshot and currently-growing herb patches.
- *
- * <p>Rows live in three states depending on what we know:
- * <ul>
- *   <li>No bank yet → amber banner, grey list, no have/short math.</li>
- *   <li>Bank seen, deficit → red main label + "have N · short M".</li>
- *   <li>Bank seen, sufficient → green main label + "have N ✓".</li>
- * </ul>
- * For herbs we also show "+Y growing (ready ~HH:MM)" when the farming
- * state has growing patches of that herb; the yield comes from
- * {@link HerbYield} using the player's Farming level.
+ * The "Potions" tab of {@link FarmwatchPanel}: user sets how many of
+ * each potion they want to brew, we show the raw herb + secondary
+ * shopping list cross-referenced against their bank snapshot and
+ * currently-growing herb patches.
  */
-public class PotionPlannerPanel extends PluginPanel
+public class PotionsTab extends JPanel
 {
     private static final String FILTER_ALL = "All";
     private static final DateTimeFormatter TIME_FMT =
@@ -68,11 +58,11 @@ public class PotionPlannerPanel extends PluginPanel
     private final JLabel emptyHint = new JLabel("Set quantities above and press Compute.");
     private final JComboBox<String> categoryFilter = new JComboBox<>();
 
-    public PotionPlannerPanel(BankTracker bankTracker,
-                              EquipmentTracker equipmentTracker,
-                              FarmwatchState farmState,
-                              Client client,
-                              FarmwatchConfig config)
+    public PotionsTab(BankTracker bankTracker,
+                      EquipmentTracker equipmentTracker,
+                      FarmwatchState farmState,
+                      Client client,
+                      FarmwatchConfig config)
     {
         super();
         this.bankTracker = bankTracker;
@@ -81,7 +71,7 @@ public class PotionPlannerPanel extends PluginPanel
         this.client = client;
         this.config = config;
         setLayout(new BorderLayout());
-        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         setBackground(ColorScheme.DARK_GRAY_COLOR);
 
         add(buildHeader(), BorderLayout.NORTH);
@@ -94,15 +84,9 @@ public class PotionPlannerPanel extends PluginPanel
         header.setBackground(ColorScheme.DARK_GRAY_COLOR);
         header.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
 
-        JLabel title = new JLabel("Potion Planner");
-        title.setFont(FontManager.getRunescapeBoldFont());
-        title.setForeground(ColorScheme.BRAND_ORANGE);
-        header.add(title, BorderLayout.NORTH);
-
-        JLabel sub = new JLabel("<html>Enter how many of each potion you want to brew. Open your bank and visit your herb patches so the planner can show what you have, what's growing, and what's short.</html>");
+        JLabel sub = new JLabel("<html>Enter how many of each potion you want to brew. Open your bank and visit your herb patches so we can show what you have, what's growing, and what's short.</html>");
         sub.setFont(FontManager.getRunescapeSmallFont());
         sub.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-        sub.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
         header.add(sub, BorderLayout.CENTER);
         return header;
     }
@@ -381,7 +365,6 @@ public class PotionPlannerPanel extends PluginPanel
             row.add(subLineLabel(sub));
         }
 
-        // Growing-patch line: only for herbs with yield model, and only when we actually see patches.
         String growingLine = growingSubline(ing, growing);
         if (growingLine != null)
         {
